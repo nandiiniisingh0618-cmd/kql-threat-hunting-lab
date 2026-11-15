@@ -1,7 +1,7 @@
 # GAPS.md
 
 **Generated** by `make coverage` -- do not edit.
-Last generated 2026-11-15 17:20:13Z.
+Last generated 2026-11-15 17:22:57Z.
 
 Techniques that the ingested datasets claim to contain but which no passing detection covers. This is the honest to-do list.
 

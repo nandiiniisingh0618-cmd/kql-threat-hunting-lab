@@ -12,6 +12,7 @@
     python tasks.py all             data + ingest + test + validate + coverage + docs
     python tasks.py down            stop and remove the emulator container
     python tasks.py status          show emulator / table / detection status
+    python tasks.py doctor          check this machine can run the lab (run this first)
 """
 from __future__ import annotations
 
@@ -154,6 +155,187 @@ def task_status() -> int:
     return 0
 
 
+def task_doctor() -> int:
+    """Check this machine can run the lab, before anything is downloaded.
+
+    Written because the most common first-run failure is environmental (Docker not
+    running, wrong container mode, arm64 hardware, not enough memory) and those
+    produce confusing errors much later, during `up` or `ingest`.
+    """
+    import json
+    import platform
+    import shutil
+    import socket
+    import subprocess
+    import sys as _sys
+
+    checks: list[tuple[str, bool, str]] = []   # (label, ok, detail)
+    warnings: list[str] = []
+
+    # --- Python ---
+    version = _sys.version_info
+    checks.append((
+        "Python 3.11+",
+        version >= (3, 11),
+        f"{platform.python_version()}",
+    ))
+
+    # --- dependencies ---
+    missing = []
+    for module in ("yaml", "pytest"):
+        try:
+            __import__(module)
+        except ImportError:
+            missing.append(module)
+    checks.append((
+        "Python dependencies",
+        not missing,
+        "installed" if not missing else f"missing: {', '.join(missing)} -- run: pip install -r requirements.txt",
+    ))
+
+    # --- host architecture ---
+    machine = platform.machine().lower()
+    host_is_x86 = machine in ("x86_64", "amd64")
+    checks.append((
+        "x86_64 host CPU",
+        host_is_x86,
+        f"{platform.machine()}" + ("" if host_is_x86 else " -- no arm64 emulator image exists"),
+    ))
+    if not host_is_x86:
+        warnings.append(
+            "This looks like an ARM machine. There is no arm64 build of the Kusto "
+            "emulator, so it can only run under emulation (slow, unsupported). "
+            "See docs/setup-free-cluster.md for the Azure Data Explorer fallback."
+        )
+
+    # --- docker CLI ---
+    docker = shutil.which("docker")
+    checks.append((
+        "docker on PATH",
+        bool(docker),
+        docker or "not found -- install Docker Desktop and enable WSL integration",
+    ))
+
+    daemon_ok = False
+    info: dict = {}
+    if docker:
+        probe = subprocess.run(
+            [docker, "info", "--format", "{{json .}}"],
+            capture_output=True, text=True,
+        )
+        daemon_ok = probe.returncode == 0
+        if daemon_ok:
+            try:
+                info = json.loads(probe.stdout)
+            except json.JSONDecodeError:
+                info = {}
+        checks.append((
+            "Docker daemon responding",
+            daemon_ok,
+            "ok" if daemon_ok else "not responding -- start Docker Desktop and wait for it to finish starting",
+        ))
+
+    if info:
+        # --- container mode: the image is Linux-only ---
+        server_os = str(info.get("OSType", "")).lower()
+        checks.append((
+            "Linux containers",
+            server_os == "linux",
+            server_os or "unknown",
+        ))
+        if server_os == "windows":
+            warnings.append(
+                "Docker is in Windows-container mode. Right-click the Docker tray icon "
+                "and choose 'Switch to Linux containers'."
+            )
+
+        # --- docker's own architecture ---
+        server_arch = str(info.get("Architecture", "")).lower()
+        arch_ok = server_arch in ("x86_64", "amd64")
+        checks.append((
+            "Docker engine is x86_64",
+            arch_ok,
+            server_arch or "unknown",
+        ))
+
+        # --- memory available to containers ---
+        total_bytes = info.get("MemTotal") or 0
+        total_gib = total_bytes / (1024 ** 3)
+        memory_ok = total_gib >= 3.5
+        checks.append((
+            "Memory for containers >= 4 GiB",
+            memory_ok,
+            f"{total_gib:.1f} GiB",
+        ))
+        if not memory_ok and total_bytes:
+            warnings.append(
+                f"Docker reports only {total_gib:.1f} GiB. The emulator is started with "
+                f"-m {config.kustainer_memory()}; raise Docker's memory limit "
+                "(Settings -> Resources) or lower KUSTAINER_MEMORY in .env."
+            )
+
+        # --- is the image already local? ---
+        images = subprocess.run(
+            [docker, "images", "-q", IMAGE], capture_output=True, text=True
+        ).stdout.strip()
+        checks.append((
+            "Emulator image present",
+            True,
+            "cached" if images else "will be pulled on first `up` (4.45 GB, 5-10 min)",
+        ))
+
+    # --- disk ---
+    usage = shutil.disk_usage(str(REPO_ROOT))
+    free_gib = usage.free / (1024 ** 3)
+    disk_ok = free_gib >= 10
+    checks.append((
+        "Free disk >= 10 GB",
+        disk_ok,
+        f"{free_gib:.1f} GiB free",
+    ))
+    if not disk_ok:
+        warnings.append(
+            f"Only {free_gib:.1f} GiB free. Budget ~4.5 GB image + ~1 GB extracted data."
+        )
+
+    # --- port ---
+    port = int(config.kustainer_port())
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe_socket:
+        probe_socket.settimeout(1)
+        port_in_use = probe_socket.connect_ex(("127.0.0.1", port)) == 0
+    if port_in_use:
+        from tools.kusto import KustoClient
+        ours = KustoClient(database="NetDefaultDB").is_reachable()
+        checks.append((
+            f"Port {port}",
+            ours,
+            "in use by a running Kusto emulator (fine)" if ours
+            else "in use by something else -- change KUSTAINER_PORT in .env",
+        ))
+    else:
+        checks.append((f"Port {port}", True, "free"))
+
+    # --- report ---
+    width = max(len(label) for label, _, _ in checks)
+    print("Preflight check\n")
+    for label, ok, detail in checks:
+        print(f"  [{'ok' if ok else 'XX'}]  {label:<{width}}  {detail}")
+
+    failures = [label for label, ok, _ in checks if not ok]
+    if warnings:
+        print("")
+        for warning in warnings:
+            print(f"  !  {warning}")
+
+    print("")
+    if failures:
+        print(f"{len(failures)} check(s) failed: {', '.join(failures)}")
+        print("Fix those, then re-run: python tasks.py doctor")
+        return 1
+    print("All checks passed. Next: python tasks.py up")
+    return 0
+
+
 def task_all() -> int:
     for task in ("data", "ingest", "validate-attack", "test", "coverage", "docs"):
         code = TASKS[task]()
@@ -167,6 +349,7 @@ TASKS = {
     "up": task_up,
     "down": task_down,
     "status": task_status,
+    "doctor": task_doctor,
     "data": lambda: python_module("tools.fetch_data"),
     "ingest": lambda: python_module("tools.ingest"),
     "test": lambda: run([sys.executable, "-m", "pytest", "-q", "tests"]),

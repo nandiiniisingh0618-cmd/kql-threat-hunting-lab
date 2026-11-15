@@ -16,6 +16,31 @@ This is the primary supported path. Everything runs locally; no Azure account ne
 
 `make` is **not** required. Every target has an identical `python tasks.py` equivalent.
 
+## Installing Docker Desktop
+
+If you have no Docker yet, this is the only prerequisite that takes real time.
+
+1. Download Docker Desktop for Windows from <https://www.docker.com/products/docker-desktop/>
+   (the **AMD64** installer -- Core i5 is x86_64).
+2. Run the installer and leave **"Use WSL 2 instead of Hyper-V"** checked. If it offers to
+   install the WSL 2 kernel update, accept.
+3. Reboot if prompted, then launch Docker Desktop and wait until the whale icon in the
+   tray stops animating. The first start takes a couple of minutes.
+4. Confirm it works:
+
+```powershell
+docker run --rm hello-world
+```
+
+5. Leave Docker Desktop **running** whenever you use the lab. It does not start itself
+   unless you enable "Start Docker Desktop when you sign in" in Settings -> General.
+
+Licensing: Docker Desktop is free for personal use, education and small business, but a
+paid subscription applies to larger organisations. Check Docker's current terms if you
+are installing it on a corporate machine. If that is a problem, Docker Engine installed
+directly inside WSL 2 via `apt` runs this lab equally well and is not covered by those
+terms.
+
 ## First run
 
 ```powershell
@@ -36,6 +61,13 @@ pip install -r requirements.txt
 
 ```powershell
 copy .env.example .env
+```
+
+Check the machine first — this catches the common first-run failures (Docker not
+started, Windows-container mode, not enough memory) before anything is downloaded:
+
+```powershell
+python tasks.py doctor
 ```
 
 Then the pipeline — about 10 minutes end to end, most of it the image pull:
@@ -74,6 +106,7 @@ python tasks.py all
 
 | Step | Time | Effect |
 |---|---|---|
+| `doctor` | instant | checks Python, dependencies, CPU architecture, Docker daemon, container mode, memory, disk and port 8080; exits non-zero with what to fix |
 | `up` | 5–10 min first time | pulls `kustainer-linux` (4.45 GB), starts it bound to **127.0.0.1 only**, waits for the engine to accept queries |
 | `data` | ~1 min | downloads 39 archives (~30.5 MB) at a pinned commit, verifies SHA-256, writes `data/MANIFEST.json` |
 | `ingest` | ~2 min | creates the database, applies schema + 26 normalization functions, extracts and ingests ~421k events |

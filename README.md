@@ -34,6 +34,10 @@ pip install -r requirements.txt && cp .env.example .env
 ```
 
 ```bash
+make doctor  # preflight: Docker running? x86_64? Linux containers? enough RAM and disk?
+```
+
+```bash
 make up      # pull + start the emulator, bound to 127.0.0.1 only (~5-10 min first run)
 ```
 

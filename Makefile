@@ -2,10 +2,13 @@
 # On Windows (no make), use: python tasks.py <target>
 PY ?= python
 
-.PHONY: help up down status data ingest test validate-attack coverage export-sentinel docs all clean
+.PHONY: help doctor up down status data ingest test validate-attack coverage export-sentinel docs all clean
 
 help:
 	@$(PY) tasks.py help
+
+doctor:           ## check this machine can run the lab (run this first)
+	@$(PY) tasks.py doctor
 
 up:               ## start the local Kusto emulator (bound to 127.0.0.1)
 	@$(PY) tasks.py up

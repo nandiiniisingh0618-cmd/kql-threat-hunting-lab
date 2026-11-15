@@ -1,11 +1,11 @@
 # RESULTS.md
 
-**Generated** by `make test` -- do not edit. Last run 2026-11-15 17:20:12Z.
+**Generated** by `make test` -- do not edit. Last run 2026-11-15 17:22:56Z.
 
 - ATT&CK version pinned: **v20.1**
 - Corpus: **420,977 events** across **39 datasets**
 - Detections run: **24**, with a passing real-data true positive: **24**
-- Total query time: **3.24s** (mean 0.135s per detection)
+- Total query time: **4.37s** (mean 0.182s per detection)
 
 > Every detection below is executed once against the **entire** ingested corpus. Hits are then attributed by `DatasetId`. "Cross-dataset" counts datasets the detection fired on that it does not declare as a true-positive source -- a false-positive *proxy*, not a production FP rate. These are all attack datasets, so some overlap is genuinely correct (a Mimikatz capture really does contain LSASS access).
 
@@ -13,30 +13,30 @@
 
 | Detection | Techniques | Status | TP hits | Cross-dataset | Rate | Time (s) |
 |---|---|---|---:|---:|---:|---:|
-| Autorun registry Run key written by a non-installer process | T1547.001 | validated / pass | 2 | 0 | 0.00 | 0.107 |
-| Burst of distinct discovery commands from one host | T1087.001, T1087.002, T1069.001, T1069.002, T1082, T1018, T1016, T1049, T1135 | validated / pass | 2 | 1 | 0.03 | 0.159 |
-| Credential-protection registry downgrade (WDigest, LSA PPL or NTLM) | T1112 | validated / pass | 5 | 0 | 0.00 | 0.116 |
-| DCSync - directory replication rights used by a non-machine account | T1003.006 | validated / pass | 2 | 0 | 0.00 | 0.070 |
-| Kerberoasting - RC4 service tickets requested for multiple SPNs | T1558.003 | validated / pass | 1 | 0 | 0.00 | 0.078 |
-| LOLBin proxy execution - mshta, regsvr32, rundll32 or similar | T1218.005, T1218.010, T1218.011, T1218.003, T1218.004 | validated / pass | 4 | 2 | 0.05 | 0.146 |
-| LSASS process handle opened with credential-dump access mask | T1003.001 | validated / pass | 2 | 2 | 0.05 | 0.133 |
-| NTDS.dit extraction via ntdsutil, shadow copy or direct copy | T1003.003 | validated / pass | 4 | 0 | 0.00 | 0.119 |
-| Obfuscated or encoded PowerShell execution | T1059.001 | validated / pass | 9 | 22 | 0.59 | 0.448 |
-| Pass-the-hash / overpass-the-hash - NTLM network logon with explicit credentials | T1550.002 | validated / pass | 1 | 3 | 0.08 | 0.124 |
-| Password spraying - failed logons across many distinct accounts | T1110.003 | validated / pass | 1 | 0 | 0.00 | 0.093 |
-| Process spawned by WMI provider host | T1047 | validated / pass | 2 | 1 | 0.03 | 0.159 |
-| PsExec-style remote execution - suspicious service correlated with named pipe | T1021.002, T1569.002 | validated / pass | 4 | 1 | 0.03 | 0.133 |
-| Remote thread created in another process | T1055, T1055.002 | validated / pass | 2 | 2 | 0.05 | 0.072 |
-| SAM or SYSTEM registry hive exported to disk | T1003.002 | validated / pass | 4 | 0 | 0.00 | 0.146 |
-| Scheduled task created or modified with a suspicious action | T1053.005 | validated / pass | 16 | 9 | 0.24 | 0.177 |
-| Service installed with an interpreter, temp path or named-pipe image path | T1543.003, T1569.002 | validated / pass | 4 | 2 | 0.05 | 0.088 |
-| UAC bypass via hijacked shell-open registry handler | T1548.002 | validated / pass | 4 | 0 | 0.00 | 0.120 |
-| Unsigned or user-path DLL loaded by a service or system binary | T1574.001 | validated / pass | 2 | 24 | 0.63 | 0.107 |
-| WMI permanent event subscription created | T1546.003 | validated / pass | 3 | 0 | 0.00 | 0.100 |
-| WinRM remote execution - process spawned by WinRM host | T1021.006 | validated / pass | 2 | 6 | 0.16 | 0.128 |
-| Windows Script Host execution of a script from a user-writable path | T1059.005 | validated / pass | 2 | 3 | 0.08 | 0.128 |
-| Windows Security audit log cleared | T1685.005 | validated / pass | 1 | 5 | 0.13 | 0.076 |
-| Windows event logging disabled or audit policy weakened | T1685.001 | validated / pass | 4 | 0 | 0.00 | 0.209 |
+| Autorun registry Run key written by a non-installer process | T1547.001 | validated / pass | 2 | 0 | 0.00 | 0.148 |
+| Burst of distinct discovery commands from one host | T1087.001, T1087.002, T1069.001, T1069.002, T1082, T1018, T1016, T1049, T1135 | validated / pass | 2 | 1 | 0.03 | 0.311 |
+| Credential-protection registry downgrade (WDigest, LSA PPL or NTLM) | T1112 | validated / pass | 5 | 0 | 0.00 | 0.147 |
+| DCSync - directory replication rights used by a non-machine account | T1003.006 | validated / pass | 2 | 0 | 0.00 | 0.090 |
+| Kerberoasting - RC4 service tickets requested for multiple SPNs | T1558.003 | validated / pass | 1 | 0 | 0.00 | 0.105 |
+| LOLBin proxy execution - mshta, regsvr32, rundll32 or similar | T1218.005, T1218.010, T1218.011, T1218.003, T1218.004 | validated / pass | 4 | 2 | 0.05 | 0.178 |
+| LSASS process handle opened with credential-dump access mask | T1003.001 | validated / pass | 2 | 2 | 0.05 | 0.347 |
+| NTDS.dit extraction via ntdsutil, shadow copy or direct copy | T1003.003 | validated / pass | 4 | 0 | 0.00 | 0.218 |
+| Obfuscated or encoded PowerShell execution | T1059.001 | validated / pass | 9 | 22 | 0.59 | 0.481 |
+| Pass-the-hash / overpass-the-hash - NTLM network logon with explicit credentials | T1550.002 | validated / pass | 1 | 3 | 0.08 | 0.154 |
+| Password spraying - failed logons across many distinct accounts | T1110.003 | validated / pass | 1 | 0 | 0.00 | 0.118 |
+| Process spawned by WMI provider host | T1047 | validated / pass | 2 | 1 | 0.03 | 0.101 |
+| PsExec-style remote execution - suspicious service correlated with named pipe | T1021.002, T1569.002 | validated / pass | 4 | 1 | 0.03 | 0.231 |
+| Remote thread created in another process | T1055, T1055.002 | validated / pass | 2 | 2 | 0.05 | 0.105 |
+| SAM or SYSTEM registry hive exported to disk | T1003.002 | validated / pass | 4 | 0 | 0.00 | 0.257 |
+| Scheduled task created or modified with a suspicious action | T1053.005 | validated / pass | 16 | 9 | 0.24 | 0.166 |
+| Service installed with an interpreter, temp path or named-pipe image path | T1543.003, T1569.002 | validated / pass | 4 | 2 | 0.05 | 0.114 |
+| UAC bypass via hijacked shell-open registry handler | T1548.002 | validated / pass | 4 | 0 | 0.00 | 0.137 |
+| Unsigned or user-path DLL loaded by a service or system binary | T1574.001 | validated / pass | 2 | 24 | 0.63 | 0.123 |
+| WMI permanent event subscription created | T1546.003 | validated / pass | 3 | 0 | 0.00 | 0.093 |
+| WinRM remote execution - process spawned by WinRM host | T1021.006 | validated / pass | 2 | 6 | 0.16 | 0.181 |
+| Windows Script Host execution of a script from a user-writable path | T1059.005 | validated / pass | 2 | 3 | 0.08 | 0.198 |
+| Windows Security audit log cleared | T1685.005 | validated / pass | 1 | 5 | 0.13 | 0.092 |
+| Windows event logging disabled or audit policy weakened | T1685.001 | validated / pass | 4 | 0 | 0.00 | 0.273 |
 
 ## Per-detection detail
 
@@ -45,7 +45,7 @@
 - File: `detections/persistence/T1547.001_run_key_persistence.yml`
 - Techniques: T1547.001 -> tactics Persistence, Privilege Escalation
 - Severity: Medium | Status: validated
-- Runtime: 0.107s | total hits: 2
+- Runtime: 0.148s | total hits: 2
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -57,7 +57,7 @@
 - File: `detections/discovery/T1087_recon_command_burst.yml`
 - Techniques: T1087.001, T1087.002, T1069.001, T1069.002, T1082, T1018, T1016, T1049, T1135 -> tactics Discovery
 - Severity: Medium | Status: validated
-- Runtime: 0.159s | total hits: 3
+- Runtime: 0.311s | total hits: 3
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -70,7 +70,7 @@
 - File: `detections/defense_impairment/T1112_wdigest_credential_downgrade.yml`
 - Techniques: T1112 -> tactics Defense Impairment, Persistence
 - Severity: High | Status: validated
-- Runtime: 0.116s | total hits: 5
+- Runtime: 0.147s | total hits: 5
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -82,7 +82,7 @@
 - File: `detections/credential_access/T1003.006_dcsync_replication.yml`
 - Techniques: T1003.006 -> tactics Credential Access
 - Severity: High | Status: validated
-- Runtime: 0.070s | total hits: 2
+- Runtime: 0.090s | total hits: 2
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -94,7 +94,7 @@
 - File: `detections/credential_access/T1558.003_kerberoasting.yml`
 - Techniques: T1558.003 -> tactics Credential Access
 - Severity: Medium | Status: validated
-- Runtime: 0.078s | total hits: 1
+- Runtime: 0.105s | total hits: 1
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -105,7 +105,7 @@
 - File: `detections/stealth/T1218_lolbin_proxy_execution.yml`
 - Techniques: T1218.005, T1218.010, T1218.011, T1218.003, T1218.004 -> tactics Stealth
 - Severity: Medium | Status: validated
-- Runtime: 0.146s | total hits: 8
+- Runtime: 0.178s | total hits: 8
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -119,7 +119,7 @@
 - File: `detections/credential_access/T1003.001_lsass_handle_access.yml`
 - Techniques: T1003.001 -> tactics Credential Access
 - Severity: High | Status: validated
-- Runtime: 0.133s | total hits: 4
+- Runtime: 0.347s | total hits: 4
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -133,7 +133,7 @@
 - File: `detections/credential_access/T1003.003_ntds_extraction.yml`
 - Techniques: T1003.003 -> tactics Credential Access
 - Severity: High | Status: validated
-- Runtime: 0.119s | total hits: 4
+- Runtime: 0.218s | total hits: 4
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -145,13 +145,13 @@
 - File: `detections/execution/T1059.001_powershell_obfuscation.yml`
 - Techniques: T1059.001 -> tactics Execution
 - Severity: Medium | Status: validated
-- Runtime: 0.448s | total hits: 103
+- Runtime: 0.481s | total hits: 103
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
+| SDWIN-190518184306 | 9 | no |
 | SDWIN-190518213907 | 9 | no |
 | SDWIN-190518210125 | 9 | no |
-| SDWIN-190518184306 | 9 | no |
 | SDWIN-190518211456 | 8 | no |
 | SDWIN-200921175806 | 7 | no |
 | SDWIN-200904032946 | 6 | no |
@@ -179,7 +179,7 @@
 - File: `detections/lateral_movement/T1550.002_pass_the_hash.yml`
 - Techniques: T1550.002 -> tactics Lateral Movement
 - Severity: High | Status: validated
-- Runtime: 0.124s | total hits: 4
+- Runtime: 0.154s | total hits: 4
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -193,7 +193,7 @@
 - File: `detections/credential_access/T1110.003_password_spraying.yml`
 - Techniques: T1110.003 -> tactics Credential Access
 - Severity: Medium | Status: validated
-- Runtime: 0.093s | total hits: 1
+- Runtime: 0.118s | total hits: 1
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -204,7 +204,7 @@
 - File: `detections/execution/T1047_wmi_process_execution.yml`
 - Techniques: T1047 -> tactics Execution
 - Severity: Medium | Status: validated
-- Runtime: 0.159s | total hits: 3
+- Runtime: 0.101s | total hits: 3
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -217,7 +217,7 @@
 - File: `detections/lateral_movement/T1021.002_psexec_service_and_pipe.yml`
 - Techniques: T1021.002, T1569.002 -> tactics Execution, Lateral Movement
 - Severity: High | Status: validated
-- Runtime: 0.133s | total hits: 6
+- Runtime: 0.231s | total hits: 6
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -230,13 +230,13 @@
 - File: `detections/privilege_escalation/T1055_remote_thread_injection.yml`
 - Techniques: T1055, T1055.002 -> tactics Privilege Escalation, Stealth
 - Severity: High | Status: validated
-- Runtime: 0.072s | total hits: 4
+- Runtime: 0.105s | total hits: 4
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
 | LSASS_campaign_01 | 1 | no |
-| SDWIN-201023031210 | 1 | yes |
 | SDWIN-190518184306 | 1 | no |
+| SDWIN-201023031210 | 1 | yes |
 | SDWIN-201019232515 | 1 | yes |
 
 ### SAM or SYSTEM registry hive exported to disk
@@ -244,7 +244,7 @@
 - File: `detections/credential_access/T1003.002_sam_hive_extraction.yml`
 - Techniques: T1003.002 -> tactics Credential Access
 - Severity: High | Status: validated
-- Runtime: 0.146s | total hits: 4
+- Runtime: 0.257s | total hits: 4
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -256,7 +256,7 @@
 - File: `detections/persistence/T1053.005_scheduled_task_creation.yml`
 - Techniques: T1053.005 -> tactics Execution, Persistence, Privilege Escalation
 - Severity: Medium | Status: validated
-- Runtime: 0.177s | total hits: 41
+- Runtime: 0.166s | total hits: 41
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -277,7 +277,7 @@
 - File: `detections/persistence/T1543.003_suspicious_service_install.yml`
 - Techniques: T1543.003, T1569.002 -> tactics Execution, Persistence, Privilege Escalation
 - Severity: High | Status: validated
-- Runtime: 0.088s | total hits: 8
+- Runtime: 0.114s | total hits: 8
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -291,7 +291,7 @@
 - File: `detections/privilege_escalation/T1548.002_uac_bypass_registry.yml`
 - Techniques: T1548.002 -> tactics Privilege Escalation
 - Severity: High | Status: validated
-- Runtime: 0.120s | total hits: 4
+- Runtime: 0.137s | total hits: 4
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -302,7 +302,7 @@
 - File: `detections/stealth/T1574.001_dll_search_order_hijack.yml`
 - Techniques: T1574.001 -> tactics Execution, Stealth
 - Severity: Medium | Status: validated
-- Runtime: 0.107s | total hits: 60
+- Runtime: 0.123s | total hits: 60
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -327,9 +327,9 @@
 | SDWIN-190301174830 | 1 | no |
 | SDWIN-190319131123 | 1 | no |
 | SDWIN-190518202151 | 1 | no |
-| SDWIN-220708104215 | 1 | no |
-| SDWIN-201022022144 | 1 | no |
 | SDWIN-230718151900 | 1 | no |
+| SDWIN-201022022144 | 1 | no |
+| SDWIN-220708104215 | 1 | no |
 | SDWIN-201018195009 | 1 | no |
 
 ### WMI permanent event subscription created
@@ -337,7 +337,7 @@
 - File: `detections/persistence/T1546.003_wmi_event_subscription.yml`
 - Techniques: T1546.003 -> tactics Persistence, Privilege Escalation
 - Severity: High | Status: validated
-- Runtime: 0.100s | total hits: 3
+- Runtime: 0.093s | total hits: 3
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -348,7 +348,7 @@
 - File: `detections/lateral_movement/T1021.006_winrm_remote_execution.yml`
 - Techniques: T1021.006 -> tactics Lateral Movement
 - Severity: Medium | Status: validated
-- Runtime: 0.128s | total hits: 19
+- Runtime: 0.181s | total hits: 19
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -365,7 +365,7 @@
 - File: `detections/execution/T1059.005_wsh_script_execution.yml`
 - Techniques: T1059.005 -> tactics Execution
 - Severity: Medium | Status: validated
-- Runtime: 0.128s | total hits: 6
+- Runtime: 0.198s | total hits: 6
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -379,7 +379,7 @@
 - File: `detections/defense_impairment/T1685.005_security_log_cleared.yml`
 - Techniques: T1685.005 -> tactics Defense Impairment
 - Severity: High | Status: validated
-- Runtime: 0.076s | total hits: 6
+- Runtime: 0.092s | total hits: 6
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
@@ -395,7 +395,7 @@
 - File: `detections/defense_impairment/T1685.001_event_logging_tampering.yml`
 - Techniques: T1685.001 -> tactics Defense Impairment
 - Severity: High | Status: validated
-- Runtime: 0.209s | total hits: 4
+- Runtime: 0.273s | total hits: 4
 
 | Dataset | Hits | Declared true positive |
 |---|---:|---|
