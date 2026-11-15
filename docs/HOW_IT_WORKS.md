@@ -337,6 +337,7 @@ Known false positives:
 - EDR and AV agents (MsMpEng.exe, MsSense.exe) read LSASS routinely; allowlisted above by image name.
 - Backup, DLP and performance-monitoring agents may open LSASS with 0x1410.
 - Crash-dump tooling (WerFault.exe) opens LSASS legitimately after a fault.
+- VERIFIED IN THIS CORPUS: CollectGuestLogs.exe (the Azure VM guest agent) opens LSASS with mask 0x1410 during routine diagnostic log collection, and fired on 4 unrelated datasets before being allowlisted. It is signed Microsoft tooling. This is the clearest example here of why an access-mask rule needs an environment-specific allowlist: the mask alone cannot tell it apart from Mimikatz.
 - Allowlisting by image NAME only is weak: an attacker who renames their binary to msmpeng.exe evades it. In production, allowlist by signer plus path.
 
 **4. How to evade it**

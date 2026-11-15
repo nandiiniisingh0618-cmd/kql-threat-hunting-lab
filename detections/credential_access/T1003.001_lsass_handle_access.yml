@@ -26,7 +26,11 @@ query: |
   // Processes that legitimately open LSASS on a healthy Windows host.
   let benign_source_processes = dynamic([
       "wmiprvse.exe", "msmpeng.exe", "mssense.exe", "sensendr.exe",
-      "svchost.exe", "csrss.exe", "wininit.exe", "services.exe", "lsass.exe"
+      "svchost.exe", "csrss.exe", "wininit.exe", "services.exe", "lsass.exe",
+      // Signed Microsoft tooling that reads LSASS as part of its normal job.
+      // CollectGuestLogs.exe is the Azure VM guest agent's diagnostic collector:
+      // verified benign here, it opens LSASS with 0x1410 across 4 unrelated datasets.
+      "collectguestlogs.exe", "werfault.exe", "taskmgr.exe", "vboxservice.exe"
   ]);
   SysmonProcessAccess()
   | where TimeGenerated > ago(lookback)
@@ -56,6 +60,7 @@ false_positives:
   - EDR and AV agents (MsMpEng.exe, MsSense.exe) read LSASS routinely; allowlisted above by image name.
   - Backup, DLP and performance-monitoring agents may open LSASS with 0x1410.
   - Crash-dump tooling (WerFault.exe) opens LSASS legitimately after a fault.
+  - "VERIFIED IN THIS CORPUS: CollectGuestLogs.exe (the Azure VM guest agent) opens LSASS with mask 0x1410 during routine diagnostic log collection, and fired on 4 unrelated datasets before being allowlisted. It is signed Microsoft tooling. This is the clearest example here of why an access-mask rule needs an environment-specific allowlist: the mask alone cannot tell it apart from Mimikatz."
   - "Allowlisting by image NAME only is weak: an attacker who renames their binary to msmpeng.exe evades it. In production, allowlist by signer plus path."
 tuning_notes: >-
   The 3650d lookback exists only because these public datasets were captured between 2019 and 2023. In production use 1d-7d. GrantedAccess is matched on an exact allowlist of masks rather than a bitwise test because Sysmon reports it as a hex string; a bitwise alternative is binary_and(toint(GrantedAccess), 0x0410) == 0x0410, which is more robust but costs a conversion on every row. Tighten by also requiring UnbackedCallTrace, which indicates the caller executed from unbacked memory.
