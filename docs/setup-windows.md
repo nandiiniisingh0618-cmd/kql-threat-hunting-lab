@@ -110,8 +110,10 @@ memory; raise `KUSTAINER_MEMORY` in `.env` or give Docker Desktop more RAM.
 assertion: it names the dataset, the expected hits and what it actually saw. Run
 `python tasks.py status` to confirm data is loaded.
 
-**Line endings** — if Git converts the `.kql` files to CRLF and Kusto complains, set
-`git config core.autocrlf input` and re-clone.
+**Line endings** — not an issue. Verified: the `.kql` files were converted to CRLF and
+applied through the normal `ingest` code path, and all 29 commands were accepted with the
+functions working afterwards. Kusto tolerates `\r`, so Git's `autocrlf` default on Windows
+is fine and needs no change.
 
 ## Shutting down
 
