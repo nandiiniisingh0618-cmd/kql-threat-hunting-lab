@@ -1,0 +1,747 @@
+{
+  "name": "KQL Threat-Hunting Lab",
+  "versions": {
+    "attack": "20.1",
+    "navigator": "5.1.0",
+    "layer": "4.5"
+  },
+  "domain": "enterprise-attack",
+  "description": "Techniques with at least one PASSING real-data test in this lab. Generated 2026-11-15 from RESULTS.md. Scored by number of passing detections. Coverage applies ONLY to the pinned public attack datasets in this repo, not to production telemetry.",
+  "filters": {
+    "platforms": [
+      "Windows"
+    ]
+  },
+  "sorting": 3,
+  "layout": {
+    "layout": "side",
+    "showName": true,
+    "showID": true
+  },
+  "hideDisabled": false,
+  "techniques": [
+    {
+      "techniqueID": "T1003.001",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): LSASS process handle opened with credential-dump access mask",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/credential_access/T1003.001_lsass_handle_access.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1003.002",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): SAM or SYSTEM registry hive exported to disk",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/credential_access/T1003.002_sam_hive_extraction.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1003.003",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): NTDS.dit extraction via ntdsutil, shadow copy or direct copy",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/credential_access/T1003.003_ntds_extraction.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1003.006",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): DCSync - directory replication rights used by a non-machine account",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/credential_access/T1003.006_dcsync_replication.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1016",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1018",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1021.002",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): PsExec-style remote execution - suspicious service correlated with named pipe",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/lateral_movement/T1021.002_psexec_service_and_pipe.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1021.006",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): WinRM remote execution - process spawned by WinRM host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/lateral_movement/T1021.006_winrm_remote_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1047",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Process spawned by WMI provider host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/execution/T1047_wmi_process_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1049",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1053.005",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Scheduled task created or modified with a suspicious action",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/persistence/T1053.005_scheduled_task_creation.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1055",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Remote thread created in another process",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/privilege_escalation/T1055_remote_thread_injection.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1055.002",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Remote thread created in another process",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/privilege_escalation/T1055_remote_thread_injection.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1059.001",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Obfuscated or encoded PowerShell execution",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/execution/T1059.001_powershell_obfuscation.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1059.005",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Windows Script Host execution of a script from a user-writable path",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/execution/T1059.005_wsh_script_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1069.001",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1069.002",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1082",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1087.001",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1087.002",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1110.003",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Password spraying - failed logons across many distinct accounts",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/credential_access/T1110.003_password_spraying.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1112",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Credential-protection registry downgrade (WDigest, LSA PPL or NTLM)",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/defense_impairment/T1112_wdigest_credential_downgrade.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1135",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Burst of distinct discovery commands from one host",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/discovery/T1087_recon_command_burst.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1218.003",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): LOLBin proxy execution - mshta, regsvr32, rundll32 or similar",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/stealth/T1218_lolbin_proxy_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1218.004",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): LOLBin proxy execution - mshta, regsvr32, rundll32 or similar",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/stealth/T1218_lolbin_proxy_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1218.005",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): LOLBin proxy execution - mshta, regsvr32, rundll32 or similar",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/stealth/T1218_lolbin_proxy_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1218.010",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): LOLBin proxy execution - mshta, regsvr32, rundll32 or similar",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/stealth/T1218_lolbin_proxy_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1218.011",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): LOLBin proxy execution - mshta, regsvr32, rundll32 or similar",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/stealth/T1218_lolbin_proxy_execution.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1543.003",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Service installed with an interpreter, temp path or named-pipe image path",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/persistence/T1543.003_suspicious_service_install.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1546.003",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): WMI permanent event subscription created",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/persistence/T1546.003_wmi_event_subscription.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1547.001",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Autorun registry Run key written by a non-installer process",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/persistence/T1547.001_run_key_persistence.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1548.002",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): UAC bypass via hijacked shell-open registry handler",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/privilege_escalation/T1548.002_uac_bypass_registry.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1550.002",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Pass-the-hash / overpass-the-hash - NTLM network logon with explicit credentials",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/lateral_movement/T1550.002_pass_the_hash.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1558.003",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Kerberoasting - RC4 service tickets requested for multiple SPNs",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/credential_access/T1558.003_kerberoasting.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1569.002",
+      "score": 2,
+      "color": "",
+      "comment": "2 passing detection(s): PsExec-style remote execution - suspicious service correlated with named pipe, Service installed with an interpreter, temp path or named-pipe image path",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "2"
+        },
+        {
+          "name": "files",
+          "value": "detections/lateral_movement/T1021.002_psexec_service_and_pipe.yml, detections/persistence/T1543.003_suspicious_service_install.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1574.001",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Unsigned or user-path DLL loaded by a service or system binary",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/stealth/T1574.001_dll_search_order_hijack.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1685.001",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Windows event logging disabled or audit policy weakened",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/defense_impairment/T1685.001_event_logging_tampering.yml"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1685.005",
+      "score": 1,
+      "color": "",
+      "comment": "1 passing detection(s): Windows Security audit log cleared",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "detections",
+          "value": "1"
+        },
+        {
+          "name": "files",
+          "value": "detections/defense_impairment/T1685.005_security_log_cleared.yml"
+        }
+      ],
+      "showSubtechniques": false
+    }
+  ],
+  "gradient": {
+    "colors": [
+      "#d7ebff",
+      "#1f5fa9"
+    ],
+    "minValue": 0,
+    "maxValue": 2
+  },
+  "legendItems": [
+    {
+      "label": "1 passing detection",
+      "color": "#d7ebff"
+    },
+    {
+      "label": "2 passing detections",
+      "color": "#1f5fa9"
+    }
+  ],
+  "showTacticRowBackground": true,
+  "tacticRowBackground": "#dddddd",
+  "selectTechniquesAcrossTactics": true,
+  "metadata": [
+    {
+      "name": "repo",
+      "value": "kql-threat-hunting-lab"
+    },
+    {
+      "name": "attack_version",
+      "value": "20.1"
+    },
+    {
+      "name": "detections_total",
+      "value": "24"
+    },
+    {
+      "name": "detections_passing",
+      "value": "24"
+    }
+  ]
+}
