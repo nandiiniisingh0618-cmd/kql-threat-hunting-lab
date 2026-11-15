@@ -27,4 +27,4 @@ rejected on upload. Where a rule uses one, the export emits the v20.1 name and
 adds an inline comment naming the legacy `DefenseEvasion` fallback. The full
 v20.1 tactic list is preserved in each rule's `metadata.attackTactics`.
 
-Exported 24 rules against ATT&CK v20.1 on 2026-11-15.
+Exported 24 rules against ATT&CK v20.1. Regenerate with `make export-sentinel`.

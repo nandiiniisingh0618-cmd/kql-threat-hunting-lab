@@ -83,7 +83,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Backup, imaging and migration tooling exports the SYSTEM hive legitimately."
   - "Support engineers export hives for diagnostics; SAM/SECURITY export is far rarer than SYSTEM."

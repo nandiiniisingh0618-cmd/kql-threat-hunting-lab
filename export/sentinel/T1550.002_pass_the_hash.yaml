@@ -92,7 +92,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "runas /netonly is a legitimate administrative pattern and produces exactly the LogonType 9 shape this rule looks for."
   - "Scheduled tasks and services configured with stored credentials raise 4648 routinely."

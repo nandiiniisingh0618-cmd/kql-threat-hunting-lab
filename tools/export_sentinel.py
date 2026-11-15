@@ -11,7 +11,6 @@ docs/sentinel-export.md before attempting to deploy anything.
 from __future__ import annotations
 
 import sys
-from datetime import UTC, datetime
 
 from . import config
 from .registry import attack_model, load_detections
@@ -123,7 +122,6 @@ def main(argv: list[str] | None = None) -> int:
         lines.append("    pinned public datasets. The query references this lab's normalization")
         lines.append("    functions, which do NOT exist in a Sentinel workspace: see")
         lines.append("    docs/schema-mapping.md for the table and parser each one maps to.")
-        lines.append(f"  exported: {datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')}")
         lines.append("falsePositives:")
         for item in detection["false_positives"]:
             lines.append(f"  - {yaml_quote(item)}")
@@ -167,8 +165,8 @@ def main(argv: list[str] | None = None) -> int:
         "rejected on upload. Where a rule uses one, the export emits the v20.1 name and\n"
         "adds an inline comment naming the legacy `DefenseEvasion` fallback. The full\n"
         "v20.1 tactic list is preserved in each rule's `metadata.attackTactics`.\n"
-        f"\nExported {len(written)} rules against ATT&CK v{model['version']} on "
-        f"{datetime.now(UTC).strftime('%Y-%m-%d')}.\n",
+        f"\nExported {len(written)} rules against ATT&CK v{model['version']}. "
+        "Regenerate with `make export-sentinel`.\n",
         encoding="utf-8",
     )
 

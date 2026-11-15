@@ -107,7 +107,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Logon scripts and GPO startup scripts commonly run ipconfig, hostname and net commands together on every boot."
   - "Helpdesk and support staff troubleshooting connectivity produce genuine bursts."

@@ -84,7 +84,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "EDR and AV products inject monitoring threads into user processes by design and must be allowlisted."
   - "Application compatibility shims, accessibility tools and some debuggers legitimately create remote threads."

@@ -74,7 +74,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Monitoring, inventory and software-deployment agents drive WMI heavily; their children must be allowlisted."
   - "SCCM/Intune remote actions and Group Policy scripts legitimately execute via WMI."

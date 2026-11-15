@@ -101,7 +101,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "rundll32.exe is invoked constantly by Windows and by installers with DLLs under user paths; the user-path indicator alone is weak for it."
   - "Legitimate software updaters fetch content over HTTP via these binaries."

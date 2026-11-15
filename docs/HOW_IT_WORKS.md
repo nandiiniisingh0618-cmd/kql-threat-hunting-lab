@@ -1,7 +1,7 @@
 # How it works: every detection in plain English
 
 **Generated** by `make docs` from the detection YAML -- do not edit.
-Last generated 2026-11-15 16:49:42Z.
+Regenerate with `make docs` after changing any detection.
 
 ATT&CK Enterprise **v20.1** - 24 detections.
 

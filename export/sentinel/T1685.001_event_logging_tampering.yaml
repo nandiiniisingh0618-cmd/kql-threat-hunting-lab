@@ -108,7 +108,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Group Policy refresh legitimately rewrites audit policy and can raise 4719 on every host in scope, repeatedly."
   - "Hardening and compliance baselines (CIS, STIG, SCM) deliberately change audit policy at deployment."

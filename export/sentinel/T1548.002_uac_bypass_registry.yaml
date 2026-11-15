@@ -86,7 +86,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Almost none in practice: user-hive writes to these specific handler keys are not something normal software does."
   - "Some file-association repair utilities and shell extensions touch exefile and Folder handlers."

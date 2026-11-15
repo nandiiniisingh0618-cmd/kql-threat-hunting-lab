@@ -89,7 +89,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "EDR and AV agents (MsMpEng.exe, MsSense.exe) read LSASS routinely; allowlisted above by image name."
   - "Backup, DLP and performance-monitoring agents may open LSASS with 0x1410."

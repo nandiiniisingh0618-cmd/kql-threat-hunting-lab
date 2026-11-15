@@ -114,7 +114,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Legitimate administrative use of PsExec is common; the tool is Microsoft-signed and widely used by real admins."
   - "Software deployment and remote-support products use the same service-plus-pipe pattern."

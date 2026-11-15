@@ -101,7 +101,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Deployment and configuration tooling (SCCM, Intune, Chocolatey, CI agents) routinely combines -nop -ep bypass with a download and will score 2."
   - "Administrator one-liners that fetch and run an internal script score 2 legitimately."

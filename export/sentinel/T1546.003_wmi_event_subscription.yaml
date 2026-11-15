@@ -66,7 +66,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Monitoring and systems-management products (SCCM, SCOM, antivirus) legitimately register permanent event subscriptions."
   - "Some OEM and power-management software uses WMI eventing for hardware triggers."

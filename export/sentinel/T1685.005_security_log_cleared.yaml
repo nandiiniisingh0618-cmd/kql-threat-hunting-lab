@@ -62,7 +62,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Administrators clear logs during troubleshooting, and some log-management or imaging workflows clear them deliberately."
   - "Reimaging and sysprep clear logs as part of normal provisioning."

@@ -81,7 +81,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "PowerShell Remoting is a standard administration tool; in estates that use it, this rule describes normal operations and must be baselined per source host and account."
   - "Configuration management (DSC, Ansible for Windows, Puppet) drives WinRM constantly."

@@ -81,7 +81,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Legitimate AD backup and disaster-recovery jobs use ntdsutil IFM and shadow copies on a schedule."
   - "Installing an additional domain controller via IFM media is a supported workflow."

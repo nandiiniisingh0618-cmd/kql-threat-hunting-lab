@@ -78,7 +78,6 @@ metadata:
     pinned public datasets. The query references this lab's normalization
     functions, which do NOT exist in a Sentinel workspace: see
     docs/schema-mapping.md for the table and parser each one maps to.
-  exported: 2026-11-15T16:50:36Z
 falsePositives:
   - "Legacy applications and appliances that only support RC4 request these tickets normally; allowlist those SPNs."
   - "Domain functional levels or account flags (msDS-SupportedEncryptionTypes) can force RC4 for genuine services."

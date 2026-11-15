@@ -7,7 +7,6 @@ the detection YAML, so the page cannot drift from the rules.
 from __future__ import annotations
 
 import sys
-from datetime import UTC, datetime
 
 from . import config
 from .registry import attack_model, load_detections
@@ -24,7 +23,9 @@ def main(argv: list[str] | None = None) -> int:
     lines.append("# How it works: every detection in plain English")
     lines.append("")
     lines.append("**Generated** by `make docs` from the detection YAML -- do not edit.")
-    lines.append(f"Last generated {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%SZ')}.")
+    # Deliberately no timestamp: this file is committed, so a generation time would
+    # make it show as modified on every run even when nothing changed.
+    lines.append("Regenerate with `make docs` after changing any detection.")
     lines.append("")
     lines.append(f"ATT&CK Enterprise **v{model['version']}** - {len(detections)} detections.")
     lines.append("")
