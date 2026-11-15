@@ -1,0 +1,64 @@
+id: 3a7cb31e-26d7-5847-aa48-276aedab3eac
+name: Process spawned by WMI provider host
+description: >-
+  A process was created with WmiPrvSE.exe as its parent, or wmic.exe was used to invoke process creation. WMI is a legitimate management channel, which is exactly why attackers use it for local and remote execution: the payload inherits a trusted parent.
+severity: Medium
+status: validated
+attack_version: 20.1
+techniques:
+  - T1047
+data_sources:
+  - Sysmon EventID 1 (ProcessCreate)
+query: |
+  // T1047 - Windows Management Instrumentation
+  let lookback = 3650d;
+  // WmiPrvSE legitimately spawns these as part of normal inventory and management.
+  let expected_wmi_children = dynamic([
+      "wmiprvse.exe", "wmiadap.exe", "wermgr.exe", "werfault.exe",
+      "taskhostw.exe", "conhost.exe", "msiexec.exe", "tiworker.exe"
+  ]);
+  let interpreter_children = dynamic([
+      "cmd.exe", "powershell.exe", "pwsh.exe", "cscript.exe", "wscript.exe",
+      "mshta.exe", "rundll32.exe", "regsvr32.exe", "msbuild.exe", "installutil.exe"
+  ]);
+  SysmonProcessCreate()
+  | where TimeGenerated > ago(lookback)
+  | where ParentProcess =~ "wmiprvse.exe"
+        or (Process =~ "wmic.exe" and tolower(CommandLine) has "process"
+            and tolower(CommandLine) has_any ("call", "create"))
+  | where Process !in~ (expected_wmi_children)
+  | extend ExecutionVia = iff(Process =~ "wmic.exe", "wmic process call", "WmiPrvSE child"),
+           ChildIsInterpreter = Process in~ (interpreter_children)
+  | project TimeGenerated, Computer, Account, ParentProcess, Process, NewProcessName,
+            CommandLine, ExecutionVia, ChildIsInterpreter, IntegrityLevel, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: Process
+    identifier: NewProcessName
+false_positives:
+  - Monitoring, inventory and software-deployment agents drive WMI heavily; their children must be allowlisted.
+  - SCCM/Intune remote actions and Group Policy scripts legitimately execute via WMI.
+  - Some installers legitimately appear beneath WmiPrvSE.exe, which is why msiexec and TiWorker are excluded.
+  - The allowlist is image-name based and therefore evadable by renaming.
+tuning_notes: >-
+  ChildIsInterpreter is surfaced rather than filtered on, so an analyst can triage: an interpreter under WmiPrvSE is far more suspicious than an arbitrary binary. Promote to High when ChildIsInterpreter is true and the account is not a known management service account. Build the expected_wmi_children allowlist from your own estate's baseline - it is highly environment specific.
+known_blind_spots:
+  - WMI event-subscription persistence executes via scrcons.exe, not WmiPrvSE - that is the separate T1546.003 rule.
+  - WMI used only to query information (no process creation) is not execution and is intentionally not covered here.
+  - Remote WMI shows the child on the TARGET host, so without that host's telemetry the execution is unseen.
+  - An attacker whose payload is named conhost.exe or wermgr.exe is allowlisted away.
+references:
+  - https://attack.mitre.org/techniques/T1047/
+tests:
+  - dataset_id: SDWIN-200806035621
+    min_hits: 1
+    expect:
+        ParentProcess: WmiPrvSE.exe
+  - dataset_id: SDWIN-190518213907
+    min_hits: 1
+    expect:
+        Process: cmd.exe

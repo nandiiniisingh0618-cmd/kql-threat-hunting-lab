@@ -1,0 +1,138 @@
+name: CI
+
+# Lint, then run the full detection harness against the Kusto emulator.
+# Datasets are downloaded from pinned upstream sources at build time and are never
+# committed to this repository.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint and static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff==0.9.6
+
+      - name: Ruff
+        run: ruff check tools tests tasks.py
+
+      - name: Detection YAML loads and is structurally complete
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, '.')
+          from tools.registry import load_detections, REQUIRED_FIELDS
+          detections = load_detections()
+          print(f"{len(detections)} detections loaded")
+          assert detections, "no detections found"
+          for d in detections:
+              missing = [f for f in REQUIRED_FIELDS if not d.get(f)]
+              assert not missing, f"{d['_rel_path']}: empty {missing}"
+              assert "DatasetId" in d["query"], f"{d['_rel_path']}: query must emit DatasetId"
+          print("all detections structurally complete")
+          PY
+
+      - name: No dataset or secret files committed
+        run: |
+          # data/ must contain only the registry and the generated manifest.
+          unexpected=$(git ls-files data/ | grep -vE '^data/(sources\.yml|MANIFEST\.json|\.gitkeep)$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected files committed under data/:"; echo "$unexpected"; exit 1
+          fi
+          if git ls-files | grep -qE '\.(evtx|zip|tar\.gz)$'; then
+            echo "Dataset archives must never be committed"; exit 1
+          fi
+          if git ls-files | grep -qxF '.env'; then
+            echo ".env must never be committed"; exit 1
+          fi
+          echo "no data or secrets committed"
+
+  attack:
+    name: ATT&CK technique IDs are current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      # Downloads the pinned STIX bundle and fails on any revoked, deprecated or
+      # missing technique ID. This is the gate that would have caught T1070.001 and
+      # T1562.001 being revoked in ATT&CK v20.1.
+      - run: python tasks.py validate-attack
+
+  harness:
+    name: Detection harness against the Kusto emulator
+    runs-on: ubuntu-latest
+    # The emulator is x86_64 Linux only and needs ~4 GB; ubuntu-latest runners are fine.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Configure environment
+        run: cp .env.example .env
+
+      - name: Start the Kusto emulator
+        run: python tasks.py up
+
+      - name: Download pinned datasets and verify SHA-256
+        run: python tasks.py data
+
+      - name: Apply schema and ingest
+        run: python tasks.py ingest
+
+      - name: Run the detection harness
+        run: python tasks.py test
+
+      - name: Generate coverage from test results
+        run: |
+          python tasks.py coverage
+          python tasks.py docs
+
+      - name: Confirm generated pages are not stale
+        run: |
+          # COVERAGE.md and GAPS.md are generated, never hand-written. They are
+          # gitignored, so this only asserts they were produced.
+          test -f RESULTS.md
+          test -f coverage/COVERAGE.md
+          test -f coverage/GAPS.md
+          test -f coverage/attack-layer.json
+          echo "generated artefacts present"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detection-results
+          path: |
+            RESULTS.md
+            coverage/
+            docs/HOW_IT_WORKS.md
+          if-no-files-found: warn
+
+      - name: Emulator logs on failure
+        if: failure()
+        run: docker logs kustainer-kqllab || true

@@ -1,0 +1,74 @@
+id: 3e380fcb-abae-53a1-a294-b04bc21e6591
+name: SAM or SYSTEM registry hive exported to disk
+description: >-
+  A command line saved or exported the SAM, SECURITY or SYSTEM registry hive root to a file. Offline, those hives together yield local account password hashes, so exporting the hive root is a reliable credential-access signal. Exports of individual subkeys underneath a hive are normal administration and are excluded.
+severity: High
+status: validated
+attack_version: 20.1
+techniques:
+  - T1003.002
+data_sources:
+  - Sysmon EventID 1 (ProcessCreate)
+  - Security EventID 4688 (ProcessCreate)
+query: |
+  // T1003.002 - Security Account Manager
+  let lookback = 3650d;
+  let hive_dump_verbs = dynamic(["save", "export", "copy"]);
+  // Matches a hive ROOT only: "hklm\sam" followed by whitespace, a quote or end of
+  // string. This deliberately excludes "hklm\system\currentcontrolset\..." which
+  // ordinary provisioning and support scripts export all the time.
+  let hive_root_pattern = @'hklm\\(sam|security|system)(\s|"|$)';
+  let process_events =
+      union isfuzzy=false
+        ( SysmonProcessCreate()
+          | project TimeGenerated, Computer, Account, Process, NewProcessName,
+                    CommandLine, ParentProcess, DatasetId, Telemetry = "Sysmon1" ),
+        ( SecurityProcessCreate()
+          | project TimeGenerated, Computer, Account, Process, NewProcessName,
+                    CommandLine, ParentProcess, DatasetId, Telemetry = "Security4688" );
+  process_events
+  | where TimeGenerated > ago(lookback)
+  | where isnotempty(CommandLine)
+  | extend CommandLineLower = tolower(CommandLine)
+  // Cheap substring prefilter before the regex, which is the expensive part.
+  | where CommandLineLower has_any ("hklm", "esentutl")
+  | where (CommandLineLower matches regex hive_root_pattern
+              and CommandLineLower has_any (hive_dump_verbs))
+        or (Process =~ "esentutl.exe" and CommandLineLower has_any ("sam", "security", "system"))
+  // Computer accounts performing SYSTEM-hive maintenance are an OS behaviour, not theft.
+  | where Account !endswith "$"
+  | project TimeGenerated, Computer, Account, Process, CommandLine, ParentProcess,
+            Telemetry, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: Process
+    identifier: Process
+false_positives:
+  - Backup, imaging and migration tooling exports the SYSTEM hive legitimately.
+  - Support engineers export hives for diagnostics; SAM/SECURITY export is far rarer than SYSTEM.
+  - "VERIFIED IN THIS CORPUS: dataset SDWIN-190319023812 contains WORKSTATION5$ (a computer account) running 'reg export HKLM\\SYSTEM\\CurrentControlSet\\...'. That is benign OS activity and is the reason this rule matches only hive roots and drops accounts ending in '$'."
+  - A single hive export without the other two is less conclusive; hash cracking needs SAM plus SYSTEM.
+tuning_notes: >-
+  Two filters do the de-noising: the hive-root regex (so subkey exports are ignored) and dropping computer accounts. Keep the cheap has_any("hklm") prefilter ahead of the regex so the regex only evaluates on candidate rows. To raise fidelity further, join to Sysmon EventID 11 to confirm the output file appeared, and escalate when two or more different hives are exported by the same account within a short window.
+known_blind_spots:
+  - In-memory hive reads through registry APIs create no child process and no command line.
+  - Volume-shadow-copy access to the hive files bypasses reg.exe entirely (covered by the T1003.003 rule).
+  - Command-line auditing must be on for the 4688 arm; without it only Sysmon works.
+  - An attacker who exports to a subkey path repeatedly could stitch a hive together and evade the root-only match.
+  - Renaming esentutl.exe defeats the process-name arm, though the command-line arm still fires.
+references:
+  - https://attack.mitre.org/techniques/T1003/002/
+tests:
+  - dataset_id: SDWIN-190625133822
+    min_hits: 1
+    expect:
+        Process: reg.exe
+        CommandLine: save
+  - dataset_id: SDWIN-230718150800
+    min_hits: 1
+    expect:
+        Computer: DC01

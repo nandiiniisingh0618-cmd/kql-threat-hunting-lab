@@ -1,0 +1,23 @@
+// Inventory of what is actually loaded. Used by the test harness to assert that a
+// detection's dataset is present before judging the detection to have failed, and
+// by tools/make_layer.py when reporting rows scanned.
+.create-or-alter function with (folder = "90-lab", docstring = "One row per ingested dataset with event counts and time bounds")
+LabDatasets() {
+    LabEvents()
+    | summarize
+        Events      = count(),
+        Channels    = dcount(tostring(raw.Channel)),
+        FirstEvent  = min(NormalizeTime(raw)),
+        LastEvent   = max(NormalizeTime(raw))
+        by DatasetId = dataset_id
+}
+
+//---
+
+// Channel / EventID profile across the corpus. Used by hunts and by GAPS analysis.
+.create-or-alter function with (folder = "90-lab", docstring = "Event-type profile across all ingested datasets")
+LabEventProfile() {
+    LabEvents()
+    | summarize Events = count(), Datasets = dcount(dataset_id)
+        by Channel = tostring(raw.Channel), EventID = toint(raw.EventID)
+}

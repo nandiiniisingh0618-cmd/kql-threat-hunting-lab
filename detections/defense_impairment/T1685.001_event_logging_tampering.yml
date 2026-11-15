@@ -1,0 +1,99 @@
+id: 3f2d2ad7-934a-5889-823e-24c59ff689a1
+name: Windows event logging disabled or audit policy weakened
+description: >-
+  Audit policy was modified, the EventLog service's start type was changed, or the Security log's file path was redirected. Each is a way to blind defenders before or after the noisy part of an intrusion, without the obvious tell of clearing the log.
+severity: High
+status: validated
+attack_version: 20.1
+techniques:
+  - T1685.001
+data_sources:
+  - Security EventID 4719 (audit policy change)
+  - Sysmon EventID 12/13 (registry)
+  - Sysmon EventID 1 (ProcessCreate)
+query: |
+  // T1685.001 - Disable or Modify Windows Event Log
+  // NOTE: this technique was T1562.002 before ATT&CK v19/v20 reorganised the
+  // Impair Defenses tree into T1685 under the new Defense Impairment tactic (TA0112).
+  let lookback = 3650d;
+  // Registry locations that govern whether the event log runs and where it writes.
+  let eventlog_registry_fragments = dynamic([
+      @"\Services\EventLog\Security\File",
+      @"\Services\EventLog\Security\MaxSize",
+      @"\Services\EventLog\Application\File",
+      @"\Services\EventLog\System\File",
+      @"\Services\EventLog\Start",
+      @"\Services\eventlog\Start",
+      @"\Policies\Microsoft\Windows\EventLog",
+      @"\ScriptBlockLogging\EnableScriptBlockLogging",
+      @"\ModuleLogging\EnableModuleLogging",
+      @"\Audit\ProcessCreationIncludeCmdLine_Enabled"
+  ]);
+  let tampering =
+      union isfuzzy=false
+        // Arm 1: the audit subsystem reporting its own policy change.
+        ( SecurityAuditPolicyChange()
+          | where TimeGenerated > ago(lookback)
+          | project TimeGenerated, Computer, Account,
+                    Method = "Audit policy changed (4719)",
+                    Detail = strcat("subcategory=", SubcategoryId, " changes=", AuditPolicyChanges),
+                    ProcessName = "", DatasetId ),
+        // Arm 2: registry edits to logging configuration.
+        ( SysmonRegistry()
+          | where TimeGenerated > ago(lookback)
+          | where RegistryKey has_any ("EventLog", "ScriptBlockLogging", "ModuleLogging",
+                                       "ProcessCreationIncludeCmdLine")
+          | where RegistryKey has_any (eventlog_registry_fragments)
+          | project TimeGenerated, Computer, Account,
+                    Method = strcat("Registry ", RegistryEventType),
+                    Detail = strcat(RegistryKey, " = ", RegistryValueData),
+                    ProcessName, DatasetId ),
+        // Arm 3: the command-line tools that do it.
+        ( SysmonProcessCreate()
+          | where TimeGenerated > ago(lookback)
+          | where (Process =~ "auditpol.exe" and tolower(CommandLine) has_any ("/set", "/clear", "/remove"))
+               or (Process =~ "wevtutil.exe" and tolower(CommandLine) has_any ("sl ", "set-log", "/e:false", "/ca:"))
+               or (Process =~ "sc.exe" and tolower(CommandLine) has "eventlog"
+                   and tolower(CommandLine) has_any ("config", "stop", "disabled"))
+          | project TimeGenerated, Computer, Account,
+                    Method = strcat("Tool: ", Process),
+                    Detail = CommandLine, ProcessName = NewProcessName, DatasetId );
+  tampering
+  | summarize
+      Events    = count(),
+      Methods   = make_set(Method, 6),
+      Samples   = make_set(substring(Detail, 0, 160), 6),
+      FirstSeen = min(TimeGenerated),
+      LastSeen  = max(TimeGenerated)
+      by Computer, Account, DatasetId
+  | project TimeGenerated = FirstSeen, Computer, Account, Events, Methods, Samples,
+            LastSeen, DatasetId
+  | order by Events desc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+false_positives:
+  - Group Policy refresh legitimately rewrites audit policy and can raise 4719 on every host in scope, repeatedly.
+  - Hardening and compliance baselines (CIS, STIG, SCM) deliberately change audit policy at deployment.
+  - Log-size and retention tuning by administrators touches the MaxSize and File values.
+  - Enabling script-block logging is a defensive action that matches the same registry path as disabling it - the VALUE matters, not just the key.
+  - 4719 is noisy by nature; arm 1 alone is not deployable without GPO allowlisting.
+tuning_notes: >-
+  The three arms are unioned because each can be missing: 4719 needs audit-policy auditing enabled, the registry arm needs Sysmon to be watching these keys, and the tool arm needs command-line logging. Aggregating by host and account keeps a GPO refresh to one row instead of dozens. The single highest-value refinement is to inspect the VALUE rather than the key: EnableScriptBlockLogging set to 0 is an attack, set to 1 is hardening, and this rule currently reports both. Allowlist your GPO service accounts and your baseline-deployment windows first.
+known_blind_spots:
+  - An attacker with SYSTEM can patch the running EventLog service in memory (for example the Invoke-Phant0m thread-killing technique) and stop logging without touching the registry, a tool or the audit policy.
+  - Tampering that happens before Sysmon or audit policy is enabled is invisible by definition.
+  - Clearing the log entirely is a different, louder action - see the T1685.005 rule.
+  - Many other logging controls exist (ETW patching, AMSI bypass, WMI subscription removal) and are not covered.
+  - Renaming auditpol.exe or wevtutil.exe defeats arm 3's process-name match.
+references:
+  - https://attack.mitre.org/techniques/T1685/001/
+tests:
+  - dataset_id: SDWIN-220630130349
+    min_hits: 1
+  - dataset_id: SDWIN-220705170038
+    min_hits: 1
+  - dataset_id: SDWIN-220708104215
+    min_hits: 1

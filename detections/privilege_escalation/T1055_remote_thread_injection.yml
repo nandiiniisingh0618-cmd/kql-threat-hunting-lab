@@ -1,0 +1,70 @@
+id: c93fcbd6-44ac-503b-aaf2-5afea5fa1f0a
+name: Remote thread created in another process
+description: >-
+  A process created a thread inside a different process. This is the classic CreateRemoteThread injection primitive used to run code in a trusted process's address space, for credential access, defence evasion or privilege escalation.
+severity: High
+status: validated
+attack_version: 20.1
+techniques:
+  - T1055
+  - T1055.002
+data_sources:
+  - Sysmon EventID 8 (CreateRemoteThread)
+query: |
+  // T1055 - Process Injection (incl. T1055.002 Portable Executable Injection)
+  let lookback = 3650d;
+  // Known-benign injectors on a healthy host. csrss and wininit create threads in new
+  // processes as part of normal process startup.
+  let benign_injector_pairs = dynamic(["csrss.exe", "wininit.exe", "services.exe",
+                                       "svchost.exe", "msmpeng.exe", "mssense.exe"]);
+  // A StartModule of NULL/empty means the thread entry point is in unbacked memory,
+  // which is a strong signal of shellcode rather than a legitimate module call.
+  SysmonRemoteThread()
+  | where TimeGenerated > ago(lookback)
+  | where SourceProcess !~ TargetProcess            // self-threads are not injection
+  | where SourceProcess !in~ (benign_injector_pairs)
+  | extend UnbackedEntryPoint = isempty(StartModule) or StartModule =~ "null",
+           TargetIsLsass      = TargetProcess =~ "lsass.exe"
+  | summarize
+      Threads        = count(),
+      StartModules   = make_set(StartModule, 5),
+      StartFunctions = make_set(StartFunction, 5),
+      FirstSeen      = min(TimeGenerated),
+      LastSeen       = max(TimeGenerated),
+      AnyUnbacked    = max(UnbackedEntryPoint)
+      by Computer, Account, SourceProcessName, SourceProcess, TargetProcessName,
+         TargetProcess, TargetIsLsass, DatasetId
+  | project TimeGenerated = FirstSeen, Computer, Account,
+            SourceProcessName, SourceProcess, TargetProcessName, TargetProcess,
+            Threads, AnyUnbacked, TargetIsLsass, StartModules, StartFunctions,
+            LastSeen, DatasetId
+  | order by Threads desc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: Process
+    identifier: SourceProcessName
+false_positives:
+  - EDR and AV products inject monitoring threads into user processes by design and must be allowlisted.
+  - Application compatibility shims, accessibility tools and some debuggers legitimately create remote threads.
+  - Software protection and licensing wrappers (DRM) use injection.
+  - Browser sandboxing and some installers create threads cross-process during startup.
+  - The allowlist is image-name based, so renaming a payload to csrss.exe evades it.
+tuning_notes: >-
+  AnyUnbacked is the most valuable column: a remote thread whose entry point is not in a named module is almost always shellcode. Promote to critical when AnyUnbacked is true or TargetIsLsass is true. Aggregating by source/target pair keeps a noisy injector to one row. Only 254 EventID 8 events exist across this corpus, so volume is modest - on production telemetry expect EDR agents to dominate and allowlist them by signer rather than by name.
+known_blind_spots:
+  - "The stealthier injection families produce no EventID 8 at all: APC queuing, thread hijacking (SetThreadContext on an existing thread), process hollowing and Early Bird all avoid CreateRemoteThread."
+  - Mapping-based injection (NtMapViewOfSection) plus an existing thread is invisible here.
+  - Sysmon EventID 8 is often disabled or heavily filtered in production because of volume.
+  - Only the creation is seen, not what the thread did - correlate with the target process's subsequent behaviour.
+  - Injection within the same process (self-injection, reflective loading) is not cross-process and is intentionally excluded.
+references:
+  - https://attack.mitre.org/techniques/T1055/
+  - https://attack.mitre.org/techniques/T1055/002/
+tests:
+  - dataset_id: SDWIN-201023031210
+    min_hits: 1
+  - dataset_id: SDWIN-201019232515
+    min_hits: 1

@@ -1,0 +1,79 @@
+id: d07e066c-37d8-57f3-ab3b-17210a0e072d
+name: Autorun registry Run key written by a non-installer process
+description: >-
+  A value was written under a CurrentVersion\Run or RunOnce key by a process that is not a known installer or OS component. Run keys execute at logon, which makes them the cheapest reliable user-level persistence on Windows.
+severity: Medium
+status: validated
+attack_version: 20.1
+techniques:
+  - T1547.001
+data_sources:
+  - Sysmon EventID 12/13 (registry)
+query: |
+  // T1547.001 - Registry Run Keys / Startup Folder
+  let lookback = 3650d;
+  // Both HKLM (machine-wide) and HKU/HKCU (per-user) autorun locations.
+  let autorun_key_fragments = dynamic([
+      @"\CurrentVersion\Run",
+      @"\CurrentVersion\RunOnce",
+      @"\CurrentVersion\RunServices",
+      @"\CurrentVersion\RunServicesOnce"
+  ]);
+  // Processes that write autorun values as part of legitimate install/update work.
+  let installer_processes = dynamic([
+      "msiexec.exe", "trustedinstaller.exe", "tiworker.exe", "setup.exe",
+      "msmpeng.exe", "mpsigstub.exe", "svchost.exe", "explorer.exe",
+      "googleupdate.exe", "onedrivesetup.exe", "msedge.exe", "chrome.exe",
+      "firefox.exe", "teams.exe", "update.exe", "squirrel.exe"
+  ]);
+  // Interpreters and LOLBins writing autorun values is the interesting case.
+  let interpreters = dynamic([
+      "powershell.exe", "pwsh.exe", "cmd.exe", "cscript.exe", "wscript.exe",
+      "mshta.exe", "rundll32.exe", "regsvr32.exe", "reg.exe", "regedit.exe"
+  ]);
+  SysmonRegistry()
+  | where TimeGenerated > ago(lookback)
+  | where RegistryEventType !~ "DeleteValue"
+  // Cheap substring gate before the has_any over the key fragments.
+  | where RegistryKey has "CurrentVersion"
+  | where RegistryKey has_any (autorun_key_fragments)
+  | where Process !in~ (installer_processes)
+  | extend Scope           = iff(RegistryKey startswith "HKLM", "Machine", "User"),
+           WrittenByInterpreter = Process in~ (interpreters)
+  | project TimeGenerated, Computer, Account, Process, ProcessName,
+            RegistryKey, RegistryValueData, RegistryEventType, Scope,
+            WrittenByInterpreter, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: Process
+    identifier: ProcessName
+  - entity_type: RegistryKey
+    identifier: RegistryKey
+false_positives:
+  - Any application installer or updater not in the allowlist writes autorun values legitimately; the allowlist is estate specific and will need extending.
+  - User-installed software (browsers, chat clients, VPNs) adds Run values on first launch.
+  - Roaming-profile and provisioning tooling can rewrite autorun values at logon.
+  - "Note: Sysmon EventID 13 does not always populate User, so Account is blank for some rows in this corpus - triage on Process and Computer instead."
+tuning_notes: >-
+  WrittenByInterpreter is surfaced, not filtered, because an interpreter writing persistence is the high-fidelity case while an unknown .exe is merely unbaselined. Promote to High when WrittenByInterpreter is true. The cheap has "CurrentVersion" gate runs before the has_any so the expensive comparison only sees candidate rows. In production, pair this with the value DATA: an autorun value pointing into a user-writable path (AppData, Temp, ProgramData) is far more suspicious than one pointing into Program Files.
+known_blind_spots:
+  - Startup-folder persistence (a shortcut dropped in Start Menu\Programs\Startup) is the same ATT&CK sub-technique but is a file event, not a registry event, and is not covered here.
+  - The many other autorun locations (Winlogon Shell/Userinit, IFEO, AppInit_DLLs, Active Setup) are different sub-techniques and are not matched.
+  - Allowlisting by image name is evadable by renaming a payload to msiexec.exe.
+  - If Sysmon's registry filtering excludes these keys for performance, there is no telemetry.
+  - Deletion of a value is excluded, so an attacker's cleanup is not flagged.
+references:
+  - https://attack.mitre.org/techniques/T1547/001/
+tests:
+  - dataset_id: SDWIN-190319023812
+    min_hits: 1
+    expect:
+        Process: powershell.exe
+  - dataset_id: SDWIN-200722001847
+    min_hits: 1
+    expect:
+        Process: powershell.exe

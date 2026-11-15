@@ -1,0 +1,26 @@
+# ---- Datasets: NEVER commit or redistribute raw attack logs ----
+data/*
+!data/.gitkeep
+!data/sources.yml
+!data/MANIFEST.json
+
+# ---- Secrets ----
+.env
+*.pem
+*.key
+
+# ---- Generated ----
+coverage/attack-layer.json
+coverage/COVERAGE.md
+coverage/GAPS.md
+RESULTS.md
+attack-stix/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/

@@ -1,0 +1,63 @@
+id: eb0be1c3-dcef-5eb6-a814-a6ac342282a3
+name: Kerberoasting - RC4 service tickets requested for multiple SPNs
+description: >-
+  A single source requested Kerberos service tickets (TGS) encrypted with RC4-HMAC for one or more user-account SPNs. RC4 tickets are offline-crackable, and modern domains default to AES, so a deliberate RC4 request - especially a burst across several distinct services - is the signature of Kerberoasting.
+severity: Medium
+status: validated
+attack_version: 20.1
+techniques:
+  - T1558.003
+data_sources:
+  - Security EventID 4769 (Kerberos service ticket request)
+query: |
+  // T1558.003 - Kerberoasting
+  let lookback = 3650d;
+  let burst_window = 10m;                 // SPN sweep is fast; widen for slow-and-low
+  let min_distinct_spns = 1;              // raise to 3+ in production to cut noise
+  let rc4_encryption_types = dynamic(["0x17", "0x18"]);   // RC4-HMAC, RC4-HMAC-EXP
+  SecurityKerberos()
+  | where TimeGenerated > ago(lookback)
+  | where EventID == 4769
+  | where TicketEncryptionType in~ (rc4_encryption_types)
+  // Machine-account and krbtgt SPNs are routine; user-account SPNs are the roastable ones.
+  | where ServiceName !endswith "$" and ServiceName !~ "krbtgt"
+  | where Status =~ "0x0" or isempty(Status)      // only successfully issued tickets
+  | summarize
+      TicketsRequested = count(),
+      DistinctSpns     = dcount(ServiceName),
+      Spns             = make_set(ServiceName, 12),
+      FirstSeen        = min(TimeGenerated),
+      LastSeen         = max(TimeGenerated)
+      by Computer, TargetUserName, IpAddress, DatasetId, TimeBucket = bin(TimeGenerated, burst_window)
+  | where DistinctSpns >= min_distinct_spns
+  | extend BurstSeconds = datetime_diff('second', LastSeen, FirstSeen)
+  | project TimeGenerated = FirstSeen, Computer, Account = TargetUserName, IpAddress,
+            DistinctSpns, TicketsRequested, Spns, BurstSeconds, DatasetId
+  | order by DistinctSpns desc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: IP
+    identifier: IpAddress
+false_positives:
+  - Legacy applications and appliances that only support RC4 request these tickets normally; allowlist those SPNs.
+  - Domain functional levels or account flags (msDS-SupportedEncryptionTypes) can force RC4 for genuine services.
+  - Vulnerability scanners and AD hygiene tools deliberately enumerate SPNs and will trip this.
+  - A single RC4 ticket for one SPN is weak evidence; the burst across distinct SPNs is the real signal.
+tuning_notes: >-
+  min_distinct_spns is set to 1 so the rule is provable on this corpus, where the PurpleSharp dataset requests 5 SPNs. In production set it to 3 or higher and keep the burst_window at 10m - that combination is what separates a sweep from one legacy app. Status is filtered to 0x0 so failed requests do not inflate the count. Also consider baselining per-account: an account that has never requested a service ticket before is far more interesting than one that does so hourly.
+known_blind_spots:
+  - An attacker who requests AES tickets instead (where the SPN supports it) is invisible to this rule - the tradeoff is they are much harder to crack.
+  - Slow-and-low roasting, one SPN per hour, defeats the burst window.
+  - Requires 'Audit Kerberos Service Ticket Operations' on domain controllers.
+  - Targeted roasting of a single known high-value SPN produces DistinctSpns = 1 and is indistinguishable here from a legacy app.
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+tests:
+  - dataset_id: SDWIN-201022042947
+    min_hits: 1
+    expect:
+        Computer: MORDORDC
+        Account: pgustavo

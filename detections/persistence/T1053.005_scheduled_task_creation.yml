@@ -1,0 +1,69 @@
+id: e5d06e65-2fdc-57da-90f4-c86d2fbadf09
+name: Scheduled task created or modified with a suspicious action
+description: >-
+  A scheduled task was registered or updated. Correlates the Security audit event for task registration with schtasks.exe command lines so the rule works whether or not task-scheduler auditing is enabled, and flags tasks whose action runs an interpreter or lives in a user-writable path.
+severity: Medium
+status: validated
+attack_version: 20.1
+techniques:
+  - T1053.005
+data_sources:
+  - Security EventID 4698/4702 (scheduled task)
+  - Sysmon EventID 1 (ProcessCreate)
+query: |
+  // T1053.005 - Scheduled Task
+  let lookback = 3650d;
+  let interpreter_markers = dynamic(["cmd.exe", "powershell", "pwsh", "cscript", "wscript",
+                                     "mshta", "rundll32", "regsvr32", "%comspec%"]);
+  let user_writable_paths = dynamic([@"\users\", @"\appdata\", @"\temp\", @"\programdata\",
+                                     @"\public\", @"\windows\temp\"]);
+  let task_events =
+      union isfuzzy=false
+        // Arm 1: the audit event. TaskContent carries the full task XML, including the action.
+        ( SecurityScheduledTask()
+          | where EventID in (4698, 4702)
+          | project TimeGenerated, Computer, Account, Activity,
+                    TaskName, Detail = TaskContent, DatasetId, Telemetry = "Security4698" ),
+        // Arm 2: the command line, for hosts without task-scheduler auditing.
+        ( SysmonProcessCreate()
+          | where Process =~ "schtasks.exe"
+              and tolower(CommandLine) has_any ("/create", "-create", "/change", "-change")
+          | project TimeGenerated, Computer, Account, Activity = "SchtasksCommand",
+                    TaskName = extract(@'(?i)/tn\s+"?([^"\s]+)', 1, CommandLine),
+                    Detail = CommandLine, DatasetId, Telemetry = "Sysmon1" );
+  task_events
+  | where TimeGenerated > ago(lookback)
+  | extend DetailLower = tolower(Detail)
+  | extend ActionUsesInterpreter = DetailLower has_any (interpreter_markers),
+           ActionInUserWritablePath = DetailLower has_any (user_writable_paths)
+  | extend Indicators = strcat(iff(ActionUsesInterpreter, "interpreter ", ""),
+                               iff(ActionInUserWritablePath, "user-writable-path ", ""))
+  | project TimeGenerated, Computer, Account, Activity, TaskName,
+            Indicators, ActionUsesInterpreter, ActionInUserWritablePath,
+            Detail = substring(Detail, 0, 400), Telemetry, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+false_positives:
+  - Windows itself registers and updates many scheduled tasks; software installers add more.
+  - Patch management, backup and monitoring agents create tasks that run interpreters legitimately.
+  - GPO-delivered scheduled tasks appear as task registrations on every host in scope.
+  - This rule does not threshold or allowlist task names, so on production telemetry it needs a baseline of expected task paths (for example anything under \Microsoft\Windows\) before it is deployable.
+tuning_notes: >-
+  Deliberately returns all registrations with the indicators surfaced rather than filtering, because task names and paths are so estate-specific that any allowlist here would be fiction. The first tuning step in a real environment is to exclude task names under \Microsoft\Windows\ and then alert only where ActionUsesInterpreter is true. The two arms overlap on purpose: 4698 gives you the action XML, schtasks.exe gives you the invoking process and parent, and having both lets you spot a task created by a process rather than by an administrator.
+known_blind_spots:
+  - Tasks created through the Task Scheduler COM API directly (schtasks.exe never runs) are only caught by the 4698 arm.
+  - Registering a task on a REMOTE host via /s shows the task on the target but the command line on the source, so neither arm sees the whole action alone.
+  - 4698 requires 'Audit Other Object Access Events', which is off by default.
+  - Dropping a task XML straight into C:\Windows\System32\Tasks and creating the matching registry entry can bypass the scheduler service's audit event.
+  - TaskName extraction from the command line is regex-based and will be empty for unusual quoting.
+references:
+  - https://attack.mitre.org/techniques/T1053/005/
+tests:
+  - dataset_id: SDWIN-190319024742
+    min_hits: 1
+  - dataset_id: SDWIN-200921175806
+    min_hits: 1

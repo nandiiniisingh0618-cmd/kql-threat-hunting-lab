@@ -1,0 +1,104 @@
+id: 08440408-c3b1-550d-bb14-d7e5d78fd427
+name: PsExec-style remote execution - suspicious service correlated with named pipe
+description: >-
+  A service whose image path runs an interpreter, lives in a user-writable directory or redirects to a named pipe was installed, and named-pipe activity occurred on the same host within seconds. Correlating the two is what separates PsExec-style lateral movement from an ordinary service install. Arm A matches the exact pipe named in the service's own image path; arm B matches service-control and known remote-execution pipes.
+severity: High
+status: validated
+attack_version: 20.1
+techniques:
+  - T1021.002
+  - T1569.002
+data_sources:
+  - Security EventID 4697 / System 7045 (service installed)
+  - Sysmon EventID 17/18 (named pipe)
+query: |
+  // T1021.002 - SMB/Windows Admin Shares  /  T1569.002 - Service Execution
+  let lookback = 3650d;
+  let correlation_seconds = 120;
+  // Pipes used by PsExec and its reimplementations, plus the Service Control Manager
+  // pipes that remote service creation necessarily traverses.
+  let remote_exec_pipes = dynamic(["psexesvc", "paexec", "remcom", "csexec", "winexesvc",
+                                   "ntsvcs", "svcctl", "atsvc"]);
+  let interpreter_markers = dynamic(["cmd.exe", "%comspec%", "powershell", "pwsh",
+                                     "cscript", "wscript", "rundll32", "regsvr32", "mshta"]);
+  let user_writable_paths = dynamic([@"\users\", @"\appdata\", @"\temp\", @"\programdata\",
+                                     @"\public\", @"\windows\temp\"]);
+  // Only service installs that are themselves oddly shaped. Without this gate the rule
+  // correlates every boot-time per-user svchost service with routine \ntsvcs traffic.
+  let suspicious_services =
+      SecurityServiceInstall()
+      | where TimeGenerated > ago(lookback)
+      | where isnotempty(ServiceFileName)
+      | extend ImagePathLower = tolower(ServiceFileName)
+      | where not(ImagePathLower startswith @"c:\windows\system32\svchost.exe -k")
+      | where ImagePathLower has_any (interpreter_markers)
+           or ImagePathLower has_any (user_writable_paths)
+           or ImagePathLower has @"\\.\pipe\"
+      // The pipe the service itself names, if any: this is the Cobalt Strike / PsExec
+      // pattern "%COMSPEC% echo ... > \\.\pipe\<random>".
+      | extend ServiceNamedPipe = tolower(extract(@'\\\\\.\\pipe\\([^\s"&|>]+)', 1, ImagePathLower))
+      | project SvcTime = TimeGenerated, Computer, ServiceName, ServiceFileName,
+                ServiceAccount = Account, ServiceNamedPipe, DatasetId;
+  let pipe_events =
+      SysmonPipe()
+      | where TimeGenerated > ago(lookback)
+      | extend PipeLeaf = tolower(tostring(split(PipeName, @"\")[-1]))
+      | project PipeTime = TimeGenerated, Computer, PipeName, PipeLeaf,
+                PipeProcess = Process, PipeEventType, DatasetId;
+  // Explicit inner join on host (and DatasetId, a lab affordance so separate captures
+  // cannot correlate with one another).
+  suspicious_services
+  | join kind=inner (pipe_events) on Computer, DatasetId
+  | where abs(datetime_diff('second', PipeTime, SvcTime)) <= correlation_seconds
+  // Arm A: the pipe named inside the service image path actually appeared. Highest fidelity.
+  // Arm B: a service-control or known remote-exec tool pipe coincided with the install.
+  | extend MatchArm = case(
+        isnotempty(ServiceNamedPipe) and PipeLeaf == ServiceNamedPipe, "A: pipe named in service image path",
+        PipeLeaf has_any (remote_exec_pipes),                          "B: service-control or tool pipe",
+        "")
+  | where isnotempty(MatchArm)
+  | extend SecondsApart = abs(datetime_diff('second', PipeTime, SvcTime))
+  | summarize
+      Pipes          = make_set(PipeName, 8),
+      PipeProcesses  = make_set(PipeProcess, 5),
+      MatchArms      = make_set(MatchArm, 2),
+      PipeEvents     = count(),
+      ClosestSeconds = min(SecondsApart)
+      by Computer, ServiceName, ServiceFileName, ServiceAccount, SvcTime, DatasetId
+  | project TimeGenerated = SvcTime, Computer, Account = ServiceAccount,
+            ServiceName, ServiceFileName, MatchArms, Pipes, PipeProcesses,
+            PipeEvents, ClosestSeconds, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: Process
+    identifier: ServiceFileName
+false_positives:
+  - Legitimate administrative use of PsExec is common; the tool is Microsoft-signed and widely used by real admins.
+  - Software deployment and remote-support products use the same service-plus-pipe pattern.
+  - "Arm B is the noisier arm: \\ntsvcs and \\atsvc are traversed by ordinary local service and scheduled-task operations, so it relies on the suspicious-image-path gate to stay quiet."
+  - Sysmon's own install creates a service and a pipe, so a Sysmon upgrade can correlate.
+  - "VERIFIED IN THIS CORPUS: without the suspicious-image-path gate this rule matched boot-time per-user svchost services against routine \\ntsvcs traffic in 3 unrelated datasets (36-40 rows each). The gate removes all of them."
+tuning_notes: >-
+  Arm A is the one to trust: a service whose image path names a pipe, where that exact pipe then appears in telemetry, is essentially a signature for Cobalt Strike's and APT-Simulator's PsExec implementations, and it works even though the pipe name is randomised per run - which is precisely why a static pipe-name list cannot catch it. Arm B needs the suspicious-image-path gate to be usable at all. ClosestSeconds in this corpus is 0-3s, so tightening correlation_seconds from 120 to 30 costs nothing and raises precision. The join is declared kind=inner explicitly so the semantics are obvious rather than relying on Kusto's default.
+known_blind_spots:
+  - WMI, WinRM, DCOM and scheduled-task lateral movement create no service and no pipe; each needs its own rule.
+  - Requires BOTH service-install auditing and Sysmon pipe events; pipe events are often disabled for volume.
+  - A service pointing at a signed binary in a normal path passes the suspicious-image-path gate untouched and is never evaluated.
+  - Fileless remote execution that reuses an existing service is invisible.
+  - The rule identifies the TARGET host only. Attributing the source needs Security 5145 share access or network telemetry.
+  - Arm A depends on the pipe name surviving into the image path; tooling that creates the pipe without naming it in the service command line only reaches arm B.
+references:
+  - https://attack.mitre.org/techniques/T1021/002/
+tests:
+  - dataset_id: SDWIN-190518210125
+    min_hits: 1
+    expect:
+        ServiceName: PGUJLOAKFQFVOMHGFQPX
+  - dataset_id: SDWIN-210611210814
+    min_hits: 1
+    expect:
+        MatchArms: pipe named in service

@@ -1,0 +1,66 @@
+// Scalar helper applied by every normalization function.
+//
+// Why this exists: the datasets are not uniform. Most events carry an "@timestamp"
+// field added by the collector, but at least one dataset (SDWIN-201018195009,
+// the comsvcs.dll LSASS dump) has NO "@timestamp" at all and only populates
+// "TimeCreated". A function that read "@timestamp" alone produced a NULL
+// TimeGenerated there, and any detection with a `where TimeGenerated > ago(...)`
+// filter silently dropped the whole dataset -- the detection looked clean while
+// missing a real credential dump.
+//
+// Resolution order is most-trusted first: the collector's normalized field, then
+// Sysmon's own UTC field, then the raw Windows event fields.
+.create-or-alter function with (folder = "00-helpers", docstring = "Resolve an event timestamp across the inconsistent timestamp fields in these datasets")
+NormalizeTime(r: dynamic) {
+    coalesce(
+        todatetime(r["@timestamp"]),
+        todatetime(r["UtcTime"]),
+        todatetime(r["TimeCreated"]),
+        todatetime(r["EventTime"])
+    )
+}
+
+//---
+
+// Schema unification. The datasets are NOT collected with one agent, and the two
+// shapes present here have completely different field layouts:
+//
+//   NXLog-style (38 of 39 datasets): flat, PascalCase at the top level --
+//       { "Channel": "...", "EventID": 13, "Hostname": "...", "TargetObject": "..." }
+//
+//   Winlogbeat-style (SDWIN-190518201922): nested, snake_case --
+//       { "log_name": "...", "event_id": 13, "computer_name": "...",
+//         "event_data": { "TargetObject": "..." } }
+//
+// Without this function the winlogbeat dataset produced 2,710 rows whose Channel and
+// EventID were NULL, so every normalization function silently ignored it -- including
+// the one dataset in this corpus that actually contains the WDigest credential
+// downgrade. Unifying here means the 20+ downstream functions stay simple and no
+// detection has to know which collector produced an event.
+//
+// bag_merge keeps the FIRST occurrence of a duplicate key, so event_data (the
+// event-specific fields) is merged ahead of the envelope fields.
+.create-or-alter function with (folder = "00-helpers", docstring = "All raw events with the winlogbeat and NXLog schemas unified to one flat shape")
+LabEvents() {
+    RawEvents
+    | extend _is_beat = isnotempty(raw["event_id"])
+    | extend _unified = iff(_is_beat,
+        bag_merge(
+            raw["event_data"],
+            pack(
+                "Channel",    raw["log_name"],
+                "EventID",    raw["event_id"],
+                "Hostname",   raw["computer_name"],
+                "@timestamp", raw["@timestamp"],
+                "Message",    raw["message"],
+                "SourceName", raw["source_name"],
+                "Keywords",   raw["keywords"],
+                "Level",      raw["level"]
+            )),
+        raw)
+    | project
+        dataset_id,
+        source_file,
+        raw        = _unified,
+        Collector  = iff(_is_beat, "winlogbeat", "nxlog")
+}

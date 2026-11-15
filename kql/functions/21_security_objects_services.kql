@@ -1,0 +1,187 @@
+// Service installation, unified across Security 4697 and System 7045.
+// Both are emitted in these datasets; 7045 lives on the System channel, so a
+// detection that only reads 4697 misses hosts without that audit subcategory on.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4697 + System 7045: service installation")
+SecurityServiceInstall() {
+    LabEvents()
+    | where (tostring(raw.Channel) =~ "Security" and toint(raw.EventID) == 4697)
+         or (tostring(raw.Channel) =~ "System"   and toint(raw.EventID) == 7045)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        EventID            = toint(raw.EventID),
+        Channel            = tostring(raw.Channel),
+        ServiceName        = tostring(raw.ServiceName),
+        ServiceFileName    = coalesce(tostring(raw.ServiceFileName), tostring(raw.ImagePath)),
+        ServiceStartType   = coalesce(tostring(raw.ServiceStartType), tostring(raw.StartType)),
+        ServiceType        = tostring(raw.ServiceType),
+        ServiceAccount     = tostring(raw.ServiceAccount),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        Account            = coalesce(
+                                 iff(isempty(tostring(raw.SubjectUserName)), "",
+                                     strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+                                 tostring(raw.AccountName)),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Scheduled task lifecycle: 4698 created, 4699 deleted, 4700 enabled,
+// 4701 disabled, 4702 updated.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4698-4702: scheduled task lifecycle")
+SecurityScheduledTask() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security"
+        and toint(raw.EventID) in (4698, 4699, 4700, 4701, 4702)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        EventID            = toint(raw.EventID),
+        Activity           = case(toint(raw.EventID) == 4698, "TaskCreated",
+                                  toint(raw.EventID) == 4699, "TaskDeleted",
+                                  toint(raw.EventID) == 4700, "TaskEnabled",
+                                  toint(raw.EventID) == 4701, "TaskDisabled",
+                                  toint(raw.EventID) == 4702, "TaskUpdated",
+                                  "Other"),
+        TaskName           = tostring(raw.TaskName),
+        TaskContent        = tostring(raw.TaskContent),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        SubjectDomainName  = tostring(raw.SubjectDomainName),
+        Account            = iff(isempty(tostring(raw.SubjectDomainName)),
+                                 tostring(raw.SubjectUserName),
+                                 strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+        SubjectLogonId     = tostring(raw.SubjectLogonId),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Directory-service and object access: 4662 (object operation, carries the
+// replication GUIDs used by DCSync), 4661 (SAM/DS handle request), 4674.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4661/4662/4674: object and directory access")
+SecurityObjectAccess() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) in (4661, 4662, 4674)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        EventID            = toint(raw.EventID),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        SubjectDomainName  = tostring(raw.SubjectDomainName),
+        Account            = iff(isempty(tostring(raw.SubjectDomainName)),
+                                 tostring(raw.SubjectUserName),
+                                 strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+        ObjectType         = tostring(raw.ObjectType),
+        ObjectName         = tostring(raw.ObjectName),
+        ObjectServer       = tostring(raw.ObjectServer),
+        Properties         = tostring(raw.Properties),
+        AccessMask         = tolower(tostring(raw.AccessMask)),
+        AccessList         = tostring(raw.AccessList),
+        ProcessName        = tostring(raw.ProcessName),
+        SubjectLogonId     = tostring(raw.SubjectLogonId),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Security 5140/5145 - Network share access and detailed file-share checks.
+// RelativeTargetName is how PsExec-style named pipes over IPC$ become visible.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 5140/5145: network share access")
+SecurityShareAccess() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) in (5140, 5145)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        EventID            = toint(raw.EventID),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        SubjectDomainName  = tostring(raw.SubjectDomainName),
+        Account            = iff(isempty(tostring(raw.SubjectDomainName)),
+                                 tostring(raw.SubjectUserName),
+                                 strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+        ShareName          = tostring(raw.ShareName),
+        ShareLocalPath     = tostring(raw.ShareLocalPath),
+        RelativeTargetName = tostring(raw.RelativeTargetName),
+        AccessMask         = tolower(tostring(raw.AccessMask)),
+        AccessList         = tostring(raw.AccessList),
+        IpAddress          = tostring(raw.IpAddress),
+        ObjectType         = tostring(raw.ObjectType),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Security 4719 - System audit policy was changed. Core defence-impairment signal.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4719: audit policy change")
+SecurityAuditPolicyChange() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) == 4719
+    | project
+        TimeGenerated       = NormalizeTime(raw),
+        Computer            = tostring(raw.Hostname),
+        SubjectUserName     = tostring(raw.SubjectUserName),
+        SubjectDomainName   = tostring(raw.SubjectDomainName),
+        Account             = iff(isempty(tostring(raw.SubjectDomainName)),
+                                  tostring(raw.SubjectUserName),
+                                  strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+        AuditPolicyChanges  = tostring(raw.AuditPolicyChanges),
+        SubcategoryId       = tostring(raw.SubcategoryId),
+        SubcategoryGuid     = tostring(raw.SubcategoryGuid),
+        CategoryId          = tostring(raw.CategoryId),
+        EventID             = toint(raw.EventID),
+        DatasetId           = dataset_id,
+        SourceFile          = source_file
+}
+
+//---
+
+// Security 1102 - The audit log was cleared.
+// This event carries NO structured subject fields in this telemetry: the account
+// exists only inside Message, so it is parsed out here rather than in detections.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 1102: audit log cleared (account parsed from Message)")
+SecurityLogCleared() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) == 1102
+    | extend _msg = tostring(raw.Message)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        EventID            = toint(raw.EventID),
+        Account            = extract(@"Account Name:\s*([^\r\n\t]+)", 1, _msg),
+        AccountDomain      = extract(@"Domain Name:\s*([^\r\n\t]+)", 1, _msg),
+        SubjectUserSid     = extract(@"Security ID:\s*([^\r\n\t]+)", 1, _msg),
+        LogonId            = extract(@"Logon ID:\s*([^\r\n\t]+)", 1, _msg),
+        Message            = _msg,
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Security 4798/4799 - Local user or group membership was enumerated.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4798/4799: local user and group enumeration")
+SecurityGroupEnumeration() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) in (4798, 4799)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        EventID            = toint(raw.EventID),
+        Activity           = iff(toint(raw.EventID) == 4798, "UserMembershipEnumerated",
+                                                            "GroupMembershipEnumerated"),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        SubjectDomainName  = tostring(raw.SubjectDomainName),
+        Account            = iff(isempty(tostring(raw.SubjectDomainName)),
+                                 tostring(raw.SubjectUserName),
+                                 strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+        TargetUserName     = tostring(raw.TargetUserName),
+        TargetDomainName   = tostring(raw.TargetDomainName),
+        CallerProcessName  = tostring(raw.CallerProcessName),
+        CallerProcess      = tostring(split(tostring(raw.CallerProcessName), "\\")[-1]),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}

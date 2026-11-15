@@ -1,0 +1,133 @@
+// Security EventID 4688 - Process creation from the Windows Security log.
+// Column names match Sentinel's SecurityEvent table exactly.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4688: process creation (SecurityEvent-compatible)")
+SecurityProcessCreate() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) == 4688
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        SubjectDomainName  = tostring(raw.SubjectDomainName),
+        Account            = iff(isempty(tostring(raw.SubjectDomainName)),
+                                 tostring(raw.SubjectUserName),
+                                 strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+        NewProcessName     = tostring(raw.NewProcessName),
+        Process            = tostring(split(tostring(raw.NewProcessName), "\\")[-1]),
+        CommandLine        = tostring(raw.CommandLine),
+        ParentProcessName  = tostring(raw.ParentProcessName),
+        ParentProcess      = tostring(split(tostring(raw.ParentProcessName), "\\")[-1]),
+        NewProcessId       = tostring(raw.NewProcessId),
+        ProcessId          = tostring(raw.ProcessId),
+        TokenElevationType = tostring(raw.TokenElevationType),
+        SubjectLogonId     = tostring(raw.SubjectLogonId),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Security EventID 4624/4625 - Successful and failed logon, with LogonType decoded.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4624/4625: logon success and failure")
+SecurityLogon() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) in (4624, 4625)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        EventID            = toint(raw.EventID),
+        Activity           = iff(toint(raw.EventID) == 4624, "LogonSuccess", "LogonFailure"),
+        TargetUserName     = tostring(raw.TargetUserName),
+        TargetDomainName   = tostring(raw.TargetDomainName),
+        TargetAccount      = iff(isempty(tostring(raw.TargetDomainName)),
+                                 tostring(raw.TargetUserName),
+                                 strcat(tostring(raw.TargetDomainName), "\\", tostring(raw.TargetUserName))),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        LogonType          = toint(raw.LogonType),
+        LogonTypeName      = case(toint(raw.LogonType) == 2,  "Interactive",
+                                  toint(raw.LogonType) == 3,  "Network",
+                                  toint(raw.LogonType) == 4,  "Batch",
+                                  toint(raw.LogonType) == 5,  "Service",
+                                  toint(raw.LogonType) == 7,  "Unlock",
+                                  toint(raw.LogonType) == 8,  "NetworkCleartext",
+                                  toint(raw.LogonType) == 9,  "NewCredentials",
+                                  toint(raw.LogonType) == 10, "RemoteInteractive",
+                                  toint(raw.LogonType) == 11, "CachedInteractive",
+                                  "Other"),
+        LogonProcessName   = tostring(raw.LogonProcessName),
+        AuthenticationPackageName = tostring(raw.AuthenticationPackageName),
+        LmPackageName      = tostring(raw.LmPackageName),
+        IpAddress          = tostring(raw.IpAddress),
+        WorkstationName    = tostring(raw.WorkstationName),
+        ProcessName        = tostring(raw.ProcessName),
+        ImpersonationLevel = tostring(raw.ImpersonationLevel),
+        ElevatedToken      = tostring(raw.ElevatedToken),
+        TargetLogonId      = tostring(raw.TargetLogonId),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Security EventID 4648 - Logon using explicitly supplied credentials.
+// Fires on runas, and on pass-the-hash / overpass-the-hash tooling.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4648: explicit credential use")
+SecurityExplicitCredentials() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) == 4648
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        SubjectUserName    = tostring(raw.SubjectUserName),
+        SubjectDomainName  = tostring(raw.SubjectDomainName),
+        Account            = iff(isempty(tostring(raw.SubjectDomainName)),
+                                 tostring(raw.SubjectUserName),
+                                 strcat(tostring(raw.SubjectDomainName), "\\", tostring(raw.SubjectUserName))),
+        TargetUserName     = tostring(raw.TargetUserName),
+        TargetDomainName   = tostring(raw.TargetDomainName),
+        TargetAccount      = iff(isempty(tostring(raw.TargetDomainName)),
+                                 tostring(raw.TargetUserName),
+                                 strcat(tostring(raw.TargetDomainName), "\\", tostring(raw.TargetUserName))),
+        TargetServerName   = tostring(raw.TargetServerName),
+        ProcessName        = tostring(raw.ProcessName),
+        Process            = tostring(split(tostring(raw.ProcessName), "\\")[-1]),
+        IpAddress          = tostring(raw.IpAddress),
+        SubjectLogonId     = tostring(raw.SubjectLogonId),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Security EventID 4769/4768 - Kerberos service ticket (TGS) and TGT requests,
+// with the encryption type that makes Kerberoasting visible.
+.create-or-alter function with (folder = "10-normalize/security", docstring = "Security 4768/4769: Kerberos TGT and service-ticket requests")
+SecurityKerberos() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Security" and toint(raw.EventID) in (4768, 4769)
+    | project
+        TimeGenerated         = NormalizeTime(raw),
+        Computer              = tostring(raw.Hostname),
+        EventID               = toint(raw.EventID),
+        Activity              = iff(toint(raw.EventID) == 4768, "TgtRequest", "ServiceTicketRequest"),
+        TargetUserName        = tostring(raw.TargetUserName),
+        TargetDomainName      = tostring(raw.TargetDomainName),
+        TargetAccount         = tostring(raw.TargetUserName),
+        ServiceName           = tostring(raw.ServiceName),
+        ServiceSid            = tostring(raw.ServiceSid),
+        TicketEncryptionType  = tolower(tostring(raw.TicketEncryptionType)),
+        TicketOptions         = tostring(raw.TicketOptions),
+        TicketEncryptionName  = case(tolower(tostring(raw.TicketEncryptionType)) == "0x17", "RC4-HMAC",
+                                     tolower(tostring(raw.TicketEncryptionType)) == "0x18", "RC4-HMAC-EXP",
+                                     tolower(tostring(raw.TicketEncryptionType)) == "0x11", "AES128-CTS-HMAC-SHA1-96",
+                                     tolower(tostring(raw.TicketEncryptionType)) == "0x12", "AES256-CTS-HMAC-SHA1-96",
+                                     tolower(tostring(raw.TicketEncryptionType)) == "0x1", "DES-CBC-CRC",
+                                     tolower(tostring(raw.TicketEncryptionType)) == "0x3", "DES-CBC-MD5",
+                                     tostring(raw.TicketEncryptionType)),
+        IpAddress             = tostring(raw.IpAddress),
+        Status                = tostring(raw.Status),
+        DatasetId             = dataset_id,
+        SourceFile            = source_file
+}

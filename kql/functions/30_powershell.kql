@@ -1,0 +1,70 @@
+// PowerShell 4104 - Script-block logging. The richest execution telemetry here.
+.create-or-alter function with (folder = "10-normalize/powershell", docstring = "PowerShell 4104: script-block logging")
+PowerShellScriptBlock() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-PowerShell/Operational"
+        and toint(raw.EventID) == 4104
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = iff(isempty(tostring(raw.Domain)),
+                                 tostring(raw.AccountName),
+                                 strcat(tostring(raw.Domain), "\\", tostring(raw.AccountName))),
+        ScriptBlockText    = tostring(raw.ScriptBlockText),
+        ScriptBlockLength  = strlen(tostring(raw.ScriptBlockText)),
+        ScriptBlockId      = tostring(raw.ScriptBlockId),
+        Path               = tostring(raw.Path),
+        MessageNumber      = toint(raw.MessageNumber),
+        MessageTotal       = toint(raw.MessageTotal),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// PowerShell 4103 - Module / pipeline execution logging.
+.create-or-alter function with (folder = "10-normalize/powershell", docstring = "PowerShell 4103: module and pipeline logging")
+PowerShellModule() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-PowerShell/Operational"
+        and toint(raw.EventID) == 4103
+    | extend _msg = tostring(raw.Message)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = iff(isempty(tostring(raw.Domain)),
+                                 tostring(raw.AccountName),
+                                 strcat(tostring(raw.Domain), "\\", tostring(raw.AccountName))),
+        Payload            = _msg,
+        CommandName        = extract(@"CommandName=([^\r\n]*)", 1, _msg),
+        CommandInvocation  = extract(@"CommandInvocation\(([^)]*)\)", 1, _msg),
+        HostApplication    = extract(@"Host Application = ([^\r\n]*)", 1, _msg),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Windows PowerShell 800 - Classic pipeline execution details.
+// This event is almost entirely unstructured in this telemetry: Hostname and
+// Message are the only useful fields, so HostApplication and the command line
+// are parsed out of Message here instead of in every detection.
+.create-or-alter function with (folder = "10-normalize/powershell", docstring = "PowerShell 800: classic pipeline (fields parsed from Message)")
+PowerShellClassic() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Windows PowerShell" and toint(raw.EventID) == 800
+    | extend _msg = tostring(raw.Message)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        HostApplication    = extract(@"HostApplication=([^\r\n]*)", 1, _msg),
+        CommandLineText    = extract(@"CommandLine=([^\r\n]*)", 1, _msg),
+        UserId             = extract(@"UserId=([^\r\n]*)", 1, _msg),
+        EngineVersion      = extract(@"EngineVersion=([^\r\n]*)", 1, _msg),
+        Payload            = _msg,
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}

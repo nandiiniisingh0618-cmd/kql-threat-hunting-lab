@@ -1,0 +1,71 @@
+id: ac4bf92f-f32f-593a-8f3a-d5e1cfaf52c7
+name: NTDS.dit extraction via ntdsutil, shadow copy or direct copy
+description: >-
+  The Active Directory database NTDS.dit was copied or staged for extraction, using ntdsutil IFM, a volume shadow copy, or a direct file copy. NTDS.dit contains every domain account hash, so this is one of the highest-impact credential-access actions available on a domain controller.
+severity: High
+status: validated
+attack_version: 20.1
+techniques:
+  - T1003.003
+data_sources:
+  - Sysmon EventID 1 (ProcessCreate)
+  - Security EventID 4688 (ProcessCreate)
+query: |
+  // T1003.003 - NTDS
+  let lookback = 3650d;
+  // Each arm is a different tradecraft for the same objective.
+  let ntdsutil_markers   = dynamic(["ac i ntds", "activate instance ntds", "ifm", "create full"]);
+  let shadow_copy_tools  = dynamic(["vssadmin.exe", "diskshadow.exe", "wbadmin.exe"]);
+  let process_events =
+      union isfuzzy=false
+        ( SysmonProcessCreate()
+          | project TimeGenerated, Computer, Account, Process, CommandLine,
+                    ParentProcess, DatasetId, Telemetry = "Sysmon1" ),
+        ( SecurityProcessCreate()
+          | project TimeGenerated, Computer, Account, Process, CommandLine,
+                    ParentProcess, DatasetId, Telemetry = "Security4688" );
+  process_events
+  | where TimeGenerated > ago(lookback)
+  | where isnotempty(CommandLine)
+  | extend CommandLineLower = tolower(CommandLine)
+  | where CommandLineLower has_any ("ntds", "vssadmin", "diskshadow", "wbadmin", "shadow")
+  | extend Tradecraft = case(
+        Process =~ "ntdsutil.exe" or CommandLineLower has_any (ntdsutil_markers), "NtdsutilIFM",
+        Process in~ (shadow_copy_tools) and CommandLineLower has "shadow",            "ShadowCopy",
+        CommandLineLower has "ntds.dit",                                              "DirectFileCopy",
+        "Other")
+  | where Tradecraft != "Other"
+  | project TimeGenerated, Computer, Account, Process, CommandLine, ParentProcess,
+            Tradecraft, Telemetry, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: Process
+    identifier: Process
+false_positives:
+  - Legitimate AD backup and disaster-recovery jobs use ntdsutil IFM and shadow copies on a schedule.
+  - Installing an additional domain controller via IFM media is a supported workflow.
+  - Backup agents (Veeam, DPM, Windows Server Backup) create shadow copies constantly - the ShadowCopy arm is the noisiest of the three.
+  - Shadow-copy creation alone is weak evidence; correlate with a later read of the NTDS path.
+tuning_notes: >-
+  Tradecraft is tagged rather than collapsed so an analyst can triage by arm: NtdsutilIFM and DirectFileCopy are high-fidelity, ShadowCopy is the noisy one and is a good candidate to downgrade to Medium or to require a pairing with ntds.dit access. On a real estate, allowlist your backup service accounts and scheduled windows rather than the tool names, since the tools are legitimate.
+known_blind_spots:
+  - DCSync replication steals the same hashes over the network and never touches NTDS.dit on disk - that is a separate detection (T1003.006).
+  - Third-party or custom VSS clients that call the API directly produce no command line.
+  - An attacker renaming ntdsutil.exe still trips the command-line markers, but renaming AND obfuscating the arguments would evade this.
+  - Copying the file from an already-mounted shadow path with a generic tool (xcopy, robocopy) only matches if 'ntds.dit' appears literally.
+references:
+  - https://attack.mitre.org/techniques/T1003/003/
+tests:
+  - dataset_id: SDWIN-230718151900
+    min_hits: 1
+    expect:
+        Computer: DC01
+        Tradecraft: NtdsutilIFM
+  - dataset_id: SDWIN-230718150800
+    min_hits: 1
+    expect:
+        Tradecraft: ShadowCopy

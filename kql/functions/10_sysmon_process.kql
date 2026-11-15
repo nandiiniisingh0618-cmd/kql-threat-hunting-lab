@@ -1,0 +1,112 @@
+// Sysmon EventID 1 - Process Create.
+// Column names follow Sentinel's SecurityEvent (NewProcessName, CommandLine,
+// ParentProcessName, Account) so a detection written here ports to production
+// with minimal edits. See docs/schema-mapping.md.
+//
+// NOTE: `Channel` is compared case-insensitively (=~) on purpose. The lab datasets
+// contain BOTH "Security" and "security", and an == comparison silently drops half
+// the events. Verified against the ingested corpus.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 1: process creation, SecurityEvent-style columns")
+SysmonProcessCreate() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) == 1
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.User),
+        NewProcessName     = tostring(raw.Image),
+        Process            = tostring(split(tostring(raw.Image), "\\")[-1]),
+        CommandLine        = tostring(raw.CommandLine),
+        ParentProcessName  = tostring(raw.ParentImage),
+        ParentProcess      = tostring(split(tostring(raw.ParentImage), "\\")[-1]),
+        ParentCommandLine  = tostring(raw.ParentCommandLine),
+        OriginalFileName   = tostring(raw.OriginalFileName),
+        NewProcessId       = tostring(raw.ProcessId),
+        ParentProcessId    = tostring(raw.ParentProcessId),
+        ProcessGuid        = tostring(raw.ProcessGuid),
+        IntegrityLevel     = tostring(raw.IntegrityLevel),
+        CurrentDirectory   = tostring(raw.CurrentDirectory),
+        LogonId            = tostring(raw.LogonId),
+        Hashes             = tostring(raw.Hashes),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 10 - Process Access (handle open against another process).
+// The primary telemetry for credential-dumping detections.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 10: cross-process handle access")
+SysmonProcessAccess() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) == 10
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        SourceProcessName  = tostring(raw.SourceImage),
+        SourceProcess      = tostring(split(tostring(raw.SourceImage), "\\")[-1]),
+        TargetProcessName  = tostring(raw.TargetImage),
+        TargetProcess      = tostring(split(tostring(raw.TargetImage), "\\")[-1]),
+        GrantedAccess      = tolower(tostring(raw.GrantedAccess)),
+        CallTrace          = tostring(raw.CallTrace),
+        SourceAccount      = tostring(raw.SourceUser),
+        TargetAccount      = tostring(raw.TargetUser),
+        SourceProcessId    = tostring(raw.SourceProcessId),
+        TargetProcessId    = tostring(raw.TargetProcessId),
+        SourceProcessGuid  = tostring(raw.SourceProcessGUID),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 8 - CreateRemoteThread. Classic process-injection telemetry.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 8: remote thread creation")
+SysmonRemoteThread() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) == 8
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.AccountName),
+        SourceProcessName  = tostring(raw.SourceImage),
+        SourceProcess      = tostring(split(tostring(raw.SourceImage), "\\")[-1]),
+        TargetProcessName  = tostring(raw.TargetImage),
+        TargetProcess      = tostring(split(tostring(raw.TargetImage), "\\")[-1]),
+        StartAddress       = tostring(raw.StartAddress),
+        StartModule        = tostring(raw.StartModule),
+        StartFunction      = tostring(raw.StartFunction),
+        NewThreadId        = tostring(raw.NewThreadId),
+        SourceProcessId    = tostring(raw.SourceProcessId),
+        TargetProcessId    = tostring(raw.TargetProcessId),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 9 - RawAccessRead (\\.\ device reads; used to bypass file locks
+// when stealing SAM/NTDS).
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 9: raw device access")
+SysmonRawAccessRead() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) == 9
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.User),
+        ProcessName        = tostring(raw.Image),
+        Process            = tostring(split(tostring(raw.Image), "\\")[-1]),
+        Device             = tostring(raw.Device),
+        ProcessId          = tostring(raw.ProcessId),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}

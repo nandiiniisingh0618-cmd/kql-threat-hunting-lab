@@ -1,0 +1,7 @@
+# Pinned 2026-11-06. Python 3.11+ (tested on 3.13).
+pytest==9.2.0
+PyYAML==6.0.3
+
+# Needed only for the Azure Data Explorer free-cluster target.
+# The local Kusto emulator target uses the stdlib client in tools/kusto.py.
+azure-kusto-data==6.0.4

@@ -1,0 +1,104 @@
+id: 266c0b2a-7581-529a-8260-aaf4a73c5144
+name: Burst of distinct discovery commands from one host
+description: >-
+  A single host ran several different reconnaissance commands - account, group, host, share and network enumeration - inside a short window. Any one of these is unremarkable; a cluster of distinct ones in minutes is the hallmark of an operator orienting themselves after gaining access.
+severity: Medium
+status: validated
+attack_version: 20.1
+techniques:
+  - T1087.001
+  - T1087.002
+  - T1069.001
+  - T1069.002
+  - T1082
+  - T1018
+  - T1016
+  - T1049
+  - T1135
+data_sources:
+  - Sysmon EventID 1 (ProcessCreate)
+  - Security EventID 4688 (ProcessCreate)
+query: |
+  // Discovery burst: T1087 / T1069 / T1082 / T1018 / T1016 / T1049 / T1135
+  let lookback = 3650d;
+  let burst_window = 15m;
+  let min_distinct_categories = 2;    // raise to 3-4 on production telemetry
+  let process_events =
+      union isfuzzy=false
+        ( SysmonProcessCreate()
+          | project TimeGenerated, Computer, Account, Process, CommandLine,
+                    ParentProcess, DatasetId ),
+        ( SecurityProcessCreate()
+          | project TimeGenerated, Computer, Account, Process, CommandLine,
+                    ParentProcess, DatasetId );
+  process_events
+  | where TimeGenerated > ago(lookback)
+  | where isnotempty(CommandLine)
+  | extend CommandLineLower = tolower(CommandLine)
+  // Cheap gate: only the tools that can perform discovery at all.
+  | where Process in~ ("net.exe", "net1.exe", "whoami.exe", "nltest.exe", "systeminfo.exe",
+                       "hostname.exe", "ipconfig.exe", "arp.exe", "route.exe", "netstat.exe",
+                       "tasklist.exe", "quser.exe", "query.exe", "dsquery.exe", "nbtstat.exe",
+                       "wmic.exe", "reg.exe", "powershell.exe", "cmd.exe")
+  // Map each command to the ATT&CK technique it represents. Anything unmatched drops out.
+  | extend Category = case(
+        CommandLineLower matches regex @"\bnet1?\s+user"                 , "T1087 AccountDiscovery",
+        CommandLineLower has "get-aduser" or CommandLineLower has "enumdomainusers", "T1087 AccountDiscovery",
+        CommandLineLower matches regex @"\bnet1?\s+(localgroup|group)"   , "T1069 GroupDiscovery",
+        CommandLineLower has "get-adgroup" or CommandLineLower has "domain admins", "T1069 GroupDiscovery",
+        Process in~ ("systeminfo.exe", "hostname.exe")                   , "T1082 SystemInfoDiscovery",
+        CommandLineLower has "systeminfo"                                , "T1082 SystemInfoDiscovery",
+        Process in~ ("nltest.exe", "dsquery.exe", "nbtstat.exe")         , "T1018 RemoteSystemDiscovery",
+        CommandLineLower matches regex @"\bnet1?\s+view"                 , "T1018 RemoteSystemDiscovery",
+        Process in~ ("ipconfig.exe", "arp.exe", "route.exe")             , "T1016 NetworkConfigDiscovery",
+        Process in~ ("netstat.exe")                                      , "T1049 NetworkConnectionsDiscovery",
+        CommandLineLower matches regex @"\bnet1?\s+share"                , "T1135 NetworkShareDiscovery",
+        Process in~ ("whoami.exe")                                       , "T1033 OwnerUserDiscovery",
+        Process in~ ("tasklist.exe", "quser.exe")                        , "T1057 ProcessDiscovery",
+        "")
+  | where isnotempty(Category)
+  | summarize
+      DistinctCategories = dcount(Category),
+      Categories         = make_set(Category, 12),
+      Commands           = make_set(substring(CommandLine, 0, 120), 12),
+      CommandCount       = count(),
+      FirstSeen          = min(TimeGenerated),
+      LastSeen           = max(TimeGenerated),
+      Accounts           = make_set(Account, 5)
+      by Computer, DatasetId, TimeBucket = bin(TimeGenerated, burst_window)
+  | where DistinctCategories >= min_distinct_categories
+  | extend BurstSeconds = datetime_diff('second', LastSeen, FirstSeen)
+  | project TimeGenerated = FirstSeen, Computer, Accounts, DistinctCategories,
+            CommandCount, BurstSeconds, Categories, Commands, LastSeen, DatasetId
+  | order by DistinctCategories desc, CommandCount desc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+false_positives:
+  - Logon scripts and GPO startup scripts commonly run ipconfig, hostname and net commands together on every boot.
+  - Helpdesk and support staff troubleshooting connectivity produce genuine bursts.
+  - Inventory, monitoring and asset-management agents enumerate the same information on a schedule.
+  - Vulnerability scanners and compliance tooling will trip this reliably.
+  - Developer and admin workstations show far higher baselines than user endpoints.
+  - "IMPORTANT EVIDENCE LIMITATION: OTRF *atomic* datasets each capture a single technique in isolation, so by construction they contain only ONE discovery category and can never satisfy a 2-category threshold. This rule is therefore validated against the multi-stage captures (SDWIN-190319023812 reaches 5 categories, LSASS_campaign_01 reaches 4). That is a property of the test data, not of the rule - but it does mean the burst logic has a thinner evidence base than the single-event rules in this repo."
+  - "VERIFIED IN THIS CORPUS: whoami.exe alone (T1033) appears in 17 datasets as incidental post-exploitation noise. A 1-category threshold would therefore fire almost everywhere, which is exactly why the threshold is 2."
+tuning_notes: >-
+  min_distinct_categories = 2 with a 15m window is tuned so the rule is provable on this corpus; on production telemetry start at 3 or 4. The bin()-based bucketing is a cheap approximation of a sliding window: an operator whose commands straddle a bucket boundary can be split across two rows, which is an accepted tradeoff for cost. The single most effective tuning step is excluding known logon-script parent processes and service accounts, then baselining DistinctCategories per host role. Alerting on the burst rather than on individual commands is the whole point - individual discovery commands are far too common to be actionable.
+known_blind_spots:
+  - Discovery via .NET, LDAP or WMI APIs (SharpHound, PowerView in-memory, ADSI) spawns no child process and is completely invisible to this rule.
+  - An operator who paces commands wider than the 15m window, or runs only one category, stays under the threshold.
+  - Renamed binaries evade the process-name gate; only the command-line regexes would still match.
+  - Interactive discovery typed into an existing shell still creates child processes, but discovery done inside a single PowerShell session using cmdlets does not.
+  - bin() bucketing means a burst spanning a bucket edge may be halved and fall below the threshold.
+references:
+  - https://attack.mitre.org/techniques/T1087/
+  - https://attack.mitre.org/techniques/T1069/
+tests:
+  - dataset_id: SDWIN-190319023812
+    min_hits: 1
+    expect:
+        Computer: WORKSTATION5
+  - dataset_id: LSASS_campaign_01
+    min_hits: 1
+    expect:
+        Computer: MKT01

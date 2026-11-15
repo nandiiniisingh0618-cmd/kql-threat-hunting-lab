@@ -1,0 +1,69 @@
+id: 9a087425-cb97-5436-bb65-2cc993b38ecc
+name: UAC bypass via hijacked shell-open registry handler
+description: >-
+  A registry value was written under a shell-open command or DelegateExecute key for a protected handler such as ms-settings or mscfile. Auto-elevating Windows binaries (fodhelper.exe, computerdefaults.exe, sdclt.exe, eventvwr.exe) read these keys, so hijacking them yields a high-integrity process with no consent prompt.
+severity: High
+status: validated
+attack_version: 20.1
+techniques:
+  - T1548.002
+data_sources:
+  - Sysmon EventID 12/13 (registry)
+query: |
+  // T1548.002 - Bypass User Account Control
+  let lookback = 3650d;
+  // Handler keys abused by the well-known auto-elevate bypasses.
+  let hijackable_handlers = dynamic([
+      @"\ms-settings\shell\open\command",       // fodhelper.exe, computerdefaults.exe
+      @"\mscfile\shell\open\command",           // eventvwr.exe
+      @"\exefile\shell\runas\command",          // sdclt.exe
+      @"\folder\shell\open\command",            // various
+      @"\ms-settings\curver"
+  ]);
+  SysmonRegistry()
+  | where TimeGenerated > ago(lookback)
+  | where RegistryEventType !~ "DeleteValue"
+  // Cheap gates before the has_any: both are far more selective than the key list.
+  | where RegistryKey has_any ("ms-settings", "mscfile", "exefile", "CurVer", "DelegateExecute")
+  | where RegistryKey has_any (hijackable_handlers) or RegistryKey has "DelegateExecute"
+  // These handlers live in the per-user hive when abused; HKCU/HKU is the attack surface.
+  | where RegistryKey startswith "HKU" or RegistryKey startswith "HKCU"
+  | extend Handler = case(
+        RegistryKey has "ms-settings", "ms-settings (fodhelper/computerdefaults)",
+        RegistryKey has "mscfile",     "mscfile (eventvwr)",
+        RegistryKey has "exefile",     "exefile (sdclt)",
+        "other"),
+        IsDelegateExecute = RegistryKey has "DelegateExecute"
+  | project TimeGenerated, Computer, Account, Process, ProcessName,
+            RegistryKey, RegistryValueData, Handler, IsDelegateExecute,
+            RegistryEventType, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+  - entity_type: Process
+    identifier: ProcessName
+  - entity_type: RegistryKey
+    identifier: RegistryKey
+false_positives:
+  - "Almost none in practice: user-hive writes to these specific handler keys are not something normal software does."
+  - Some file-association repair utilities and shell extensions touch exefile and Folder handlers.
+  - Security research, red-team tooling and UAC-bypass test harnesses will trip this legitimately.
+  - An empty DelegateExecute value is part of the technique rather than a benign state, so it is flagged rather than excluded.
+tuning_notes: >-
+  This is one of the highest-fidelity rules in the set because the key paths are so specific. Restricting to HKU/HKCU matters: the machine-hive equivalents are legitimate OS state, and alerting on them would be noisy and wrong. The DelegateExecute arm catches the fodhelper variant that sets an empty DelegateExecute value to force the shell-open path. Correlate the write with a subsequent high-integrity child of fodhelper.exe to confirm the bypass actually ran.
+known_blind_spots:
+  - Only covers registry-hijack UAC bypasses. Token-duplication, DLL-hijack and COM-elevation-moniker bypasses look nothing like this.
+  - A bypass using an auto-elevating binary whose handler key is not in the list is missed; there are dozens of known variants.
+  - If the attacker cleans up the key before Sysmon flushes, the write is still logged, but correlation to the elevated child may be lost.
+  - Requires Sysmon registry auditing to include the user hives, which some configurations exclude for volume reasons.
+  - Does not confirm the elevation succeeded - it detects the setup, not the outcome.
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+tests:
+  - dataset_id: SDWIN-200904032946
+    min_hits: 1
+    expect:
+        Handler: ms-settings

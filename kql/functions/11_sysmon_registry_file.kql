@@ -1,0 +1,153 @@
+// Sysmon EventID 12 (key create/delete), 13 (value set), 14 (key/value rename).
+// Registry is the backbone of several persistence and defence-impairment detections.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 12/13/14: registry activity")
+SysmonRegistry() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) in (12, 13, 14)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.User),
+        RegistryEventType  = tostring(raw.EventType),
+        RegistryKey        = tostring(raw.TargetObject),
+        RegistryValueData  = tostring(raw.Details),
+        ProcessName        = tostring(raw.Image),
+        Process            = tostring(split(tostring(raw.Image), "\\")[-1]),
+        ProcessId          = tostring(raw.ProcessId),
+        ProcessGuid        = tostring(raw.ProcessGuid),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 11 (file create) and 23 (file delete / archive).
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 11/23: file create and delete")
+SysmonFileEvent() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) in (11, 23)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.User),
+        ProcessName        = tostring(raw.Image),
+        Process            = tostring(split(tostring(raw.Image), "\\")[-1]),
+        TargetFilename     = tostring(raw.TargetFilename),
+        IsExecutable       = tostring(raw.IsExecutable),
+        Hashes             = tostring(raw.Hashes),
+        ProcessId          = tostring(raw.ProcessId),
+        EventID            = toint(raw.EventID),
+        Activity           = case(toint(raw.EventID) == 11, "FileCreate",
+                                  toint(raw.EventID) == 23, "FileDelete",
+                                  "Other"),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 7 - Image (DLL) load, with Authenticode signature state.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 7: module load with signature state")
+SysmonImageLoad() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) == 7
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.User),
+        ProcessName        = tostring(raw.Image),
+        Process            = tostring(split(tostring(raw.Image), "\\")[-1]),
+        ImageLoaded        = tostring(raw.ImageLoaded),
+        ModuleName         = tostring(split(tostring(raw.ImageLoaded), "\\")[-1]),
+        Signed             = tostring(raw.Signed),
+        Signature          = tostring(raw.Signature),
+        SignatureStatus    = tostring(raw.SignatureStatus),
+        Hashes             = tostring(raw.Hashes),
+        ProcessId          = tostring(raw.ProcessId),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 3 - Network connection, attributed to the initiating process.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 3: process-attributed network connections")
+SysmonNetwork() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) == 3
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.User),
+        ProcessName        = tostring(raw.Image),
+        Process            = tostring(split(tostring(raw.Image), "\\")[-1]),
+        SourceIp           = tostring(raw.SourceIp),
+        SourcePort         = toint(raw.SourcePort),
+        DestinationIp      = tostring(raw.DestinationIp),
+        DestinationPort    = toint(raw.DestinationPort),
+        DestinationHostname = tostring(raw.DestinationHostname),
+        Protocol           = tostring(raw.Protocol),
+        Initiated          = tostring(raw.Initiated),
+        ProcessId          = tostring(raw.ProcessId),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 17/18 - Named pipe created / connected.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 17/18: named pipe create and connect")
+SysmonPipe() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) in (17, 18)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = tostring(raw.User),
+        ProcessName        = tostring(raw.Image),
+        Process            = tostring(split(tostring(raw.Image), "\\")[-1]),
+        PipeName           = tostring(raw.PipeName),
+        PipeEventType      = tostring(raw.EventType),
+        ProcessId          = tostring(raw.ProcessId),
+        EventID            = toint(raw.EventID),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}
+
+//---
+
+// Sysmon EventID 19/20/21 - WMI filter, consumer and filter-to-consumer binding.
+// This is the telemetry for WMI event-subscription persistence.
+.create-or-alter function with (folder = "10-normalize/sysmon", docstring = "Sysmon 19/20/21: WMI eventing objects")
+SysmonWmiEvent() {
+    LabEvents()
+    | where tostring(raw.Channel) =~ "Microsoft-Windows-Sysmon/Operational"
+        and toint(raw.EventID) in (19, 20, 21)
+    | project
+        TimeGenerated      = NormalizeTime(raw),
+        Computer           = tostring(raw.Hostname),
+        Account            = coalesce(tostring(raw.User), tostring(raw.AccountName)),
+        WmiOperation       = tostring(raw.Operation),
+        WmiName            = tostring(raw.Name),
+        WmiQuery           = tostring(raw.Query),
+        WmiEventNamespace  = tostring(raw.EventNamespace),
+        WmiConsumer        = tostring(raw.Consumer),
+        WmiFilter          = tostring(raw.Filter),
+        WmiDestination     = tostring(raw.Destination),
+        WmiType            = tostring(raw.Type),
+        EventID            = toint(raw.EventID),
+        Activity           = case(toint(raw.EventID) == 19, "WmiFilter",
+                                  toint(raw.EventID) == 20, "WmiConsumer",
+                                  toint(raw.EventID) == 21, "WmiBinding",
+                                  "Other"),
+        DatasetId          = dataset_id,
+        SourceFile         = source_file
+}

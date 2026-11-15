@@ -1,0 +1,81 @@
+id: 8e13915d-b315-5f47-a1a7-6b9f18964938
+name: Pass-the-hash / overpass-the-hash - NTLM network logon with explicit credentials
+description: >-
+  An NTLM logon occurred that bears the hallmarks of a passed hash rather than a typed password: a NewCredentials (type 9) logon created by credential-injection tooling, or an explicit-credential event whose process is not a normal logon surface. Correlates 4624 with 4648 on the same logon session.
+severity: High
+status: validated
+attack_version: 20.1
+techniques:
+  - T1550.002
+data_sources:
+  - Security EventID 4624 (logon)
+  - Security EventID 4648 (explicit credentials)
+query: |
+  // T1550.002 - Pass the Hash
+  let lookback = 3650d;
+  // Processes that legitimately request explicit credentials.
+  let expected_credential_processes = dynamic([
+      "svchost.exe", "lsass.exe", "winlogon.exe", "services.exe",
+      "taskhostw.exe", "explorer.exe", "mmc.exe", "runas.exe", "consent.exe"
+  ]);
+  // Arm 1: LogonType 9 (NewCredentials) is what sekurlsa::pth and Rubeus createnetonly
+  // produce - a process running with injected credentials while keeping the local token.
+  let new_credential_logons =
+      SecurityLogon()
+      | where TimeGenerated > ago(lookback)
+      | where EventID == 4624 and LogonType == 9
+      | where LogonProcessName has_any ("seclogo", "Advapi")
+      | project TimeGenerated, Computer, Account = TargetAccount,
+                SubjectUserName, LogonType, LogonTypeName, LogonProcessName,
+                AuthenticationPackageName, ProcessName, TargetLogonId,
+                IpAddress, DatasetId,
+                Evidence = "LogonType 9 NewCredentials (credential injection)";
+  // Arm 2: explicit credential use from an unexpected process.
+  let explicit_credentials =
+      SecurityExplicitCredentials()
+      | where TimeGenerated > ago(lookback)
+      | where Process !in~ (expected_credential_processes)
+      | where isnotempty(TargetUserName) and TargetUserName !endswith "$"
+      | project TimeGenerated, Computer, Account = TargetAccount,
+                SubjectUserName, LogonType = int(null), LogonTypeName = "",
+                LogonProcessName = "", AuthenticationPackageName = "",
+                ProcessName, TargetLogonId = SubjectLogonId, IpAddress, DatasetId,
+                Evidence = "Explicit credentials from unexpected process (4648)";
+  union isfuzzy=false (new_credential_logons), (explicit_credentials)
+  | summarize
+      Events      = count(),
+      Accounts    = make_set(Account, 6),
+      Processes   = make_set(ProcessName, 6),
+      LogonIds    = make_set(TargetLogonId, 6),
+      FirstSeen   = min(TimeGenerated),
+      LastSeen    = max(TimeGenerated)
+      by Computer, SubjectUserName, Evidence, DatasetId
+  | project TimeGenerated = FirstSeen, Computer, Account = SubjectUserName,
+            Evidence, Events, Accounts, Processes, LogonIds, LastSeen, DatasetId
+  | order by TimeGenerated asc
+entity_mappings:
+  - entity_type: Host
+    identifier: Computer
+  - entity_type: Account
+    identifier: Account
+false_positives:
+  - runas /netonly is a legitimate administrative pattern and produces exactly the LogonType 9 shape this rule looks for.
+  - Scheduled tasks and services configured with stored credentials raise 4648 routinely.
+  - Backup, monitoring and deployment agents that authenticate to remote hosts generate explicit-credential events constantly.
+  - RDP with saved credentials and credential-manager-backed SSO both raise 4648.
+  - "Arm 2 is the weaker arm: the allowlist of expected processes is estate specific and will need extending before deployment."
+tuning_notes: >-
+  Arm 1 is the discriminating one. Restricting LogonType 9 to the seclogo/Advapi logon processes is what separates credential injection from ordinary service logons, and is the closest thing to a reliable pass-the-hash signature available from Windows audit data alone. The strongest available confirmation is a NEGATIVE: a type-9 logon whose TargetLogonId never appears in a preceding 4624 type-2/type-10 for that user means the credentials were not typed on this host. Pair with the T1003.001 LSASS rule: a hash dumped here and used there within the same session is a complete attack chain.
+known_blind_spots:
+  - Kerberos pass-the-ticket and overpass-the-hash that requests a TGT look like normal Kerberos authentication and are largely invisible to this rule.
+  - Hashes used directly over SMB from a non-Windows host (Impacket from Linux) produce a type-3 network logon on the target that is indistinguishable from legitimate authentication.
+  - Requires logon auditing including 4648, which is enabled by default but frequently filtered out of collection for volume.
+  - The rule sees the host where credentials were INJECTED, not necessarily where they were stolen or ultimately used.
+  - An attacker who obtains a plaintext password and simply types it produces no anomaly here at all.
+references:
+  - https://attack.mitre.org/techniques/T1550/002/
+tests:
+  - dataset_id: SDWIN-190319131123
+    min_hits: 1
+    expect:
+        Computer: WORKSTATION6
