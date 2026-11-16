@@ -2,7 +2,7 @@
 # On Windows (no make), use: python tasks.py <target>
 PY ?= python
 
-.PHONY: help doctor up down status data ingest test validate-attack coverage export-sentinel docs all clean
+.PHONY: help doctor up down status data ingest test validate-attack coverage export-sentinel docs site all clean
 
 help:
 	@$(PY) tasks.py help
@@ -40,7 +40,10 @@ export-sentinel:  ## export detections as Sentinel analytics-rule YAML
 docs:             ## regenerate docs/HOW_IT_WORKS.md
 	@$(PY) tasks.py docs
 
-all:              ## data + ingest + validate + test + coverage + docs
+site:             ## regenerate public/index.html (the deployed status page)
+	@$(PY) tasks.py site
+
+all:              ## data + ingest + validate + test + coverage + docs + site
 	@$(PY) tasks.py all
 
 clean:            ## remove extracted data and generated artefacts (keeps archives)

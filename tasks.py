@@ -9,6 +9,7 @@
     python tasks.py coverage        generate ATT&CK layer, COVERAGE.md, GAPS.md
     python tasks.py export-sentinel export detections as Sentinel analytics rules
     python tasks.py docs            regenerate docs/HOW_IT_WORKS.md
+    python tasks.py site            regenerate public/index.html from RESULTS.md
     python tasks.py all             data + ingest + test + validate + coverage + docs
     python tasks.py down            stop and remove the emulator container
     python tasks.py status          show emulator / table / detection status
@@ -337,7 +338,7 @@ def task_doctor() -> int:
 
 
 def task_all() -> int:
-    for task in ("data", "ingest", "validate-attack", "test", "coverage", "docs"):
+    for task in ("data", "ingest", "validate-attack", "test", "coverage", "docs", "site"):
         code = TASKS[task]()
         if code != 0:
             print(f"\n'{task}' failed with exit code {code}; stopping.")
@@ -357,6 +358,7 @@ TASKS = {
     "coverage": lambda: python_module("tools.make_layer"),
     "export-sentinel": lambda: python_module("tools.export_sentinel"),
     "docs": lambda: python_module("tools.make_docs"),
+    "site": lambda: python_module("tools.make_site"),
     "all": task_all,
 }
 
@@ -372,11 +374,12 @@ def main() -> int:
         return 2
     extra = sys.argv[2:]
     if extra and name in ("data", "ingest", "test", "validate-attack", "coverage",
-                          "export-sentinel", "docs"):
+                          "export-sentinel", "docs", "site"):
         module_map = {
             "data": "tools.fetch_data", "ingest": "tools.ingest",
             "validate-attack": "tools.validate_attack", "coverage": "tools.make_layer",
             "export-sentinel": "tools.export_sentinel", "docs": "tools.make_docs",
+            "site": "tools.make_site",
         }
         if name == "test":
             return run([sys.executable, "-m", "pytest", *extra])

@@ -111,6 +111,7 @@ jobs:
         run: |
           python tasks.py coverage
           python tasks.py docs
+          python tasks.py site
 
       - name: Confirm generated pages are not stale
         run: |
@@ -120,6 +121,7 @@ jobs:
           test -f coverage/COVERAGE.md
           test -f coverage/GAPS.md
           test -f coverage/attack-layer.json
+          test -f public/index.html
           echo "generated artefacts present"
 
       - name: Upload results

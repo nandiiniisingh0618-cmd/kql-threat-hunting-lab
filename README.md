@@ -65,6 +65,9 @@ Then the generated reporting:
 make validate-attack && make coverage && make docs
 ```
 
+A static status page is generated from the same results into `public/index.html`
+(`make site`), which is what gets deployed. It needs no build step and no runtime.
+
 Full walkthrough and troubleshooting: [docs/setup-windows.md](docs/setup-windows.md).
 On ARM hardware, see [docs/setup-free-cluster.md](docs/setup-free-cluster.md).
 
@@ -268,6 +271,8 @@ docs/                                        setup, schema mapping, datasets, ho
 coverage/                                    GENERATED: layer + COVERAGE.md + GAPS.md
 data/                                        gitignored except sources.yml + MANIFEST.json
 export/sentinel/                             GENERATED, labelled UNTESTED
+public/index.html                            GENERATED status page (deployed as a static file)
+vercel.json                                  static deploy config: no build, outputs public/
 ```
 
 `make help` lists every target. All of them have a `python tasks.py <target>` equivalent.

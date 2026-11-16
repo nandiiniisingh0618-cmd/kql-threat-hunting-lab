@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KQL Threat-Hunting Lab</title>
+<meta name="description" content="24 KQL detections for Windows attack telemetry, each tested against recorded attack events and mapped to MITRE ATT&amp;CK v20.1.">
+<style>
+:root{--bg:#ffffff;--fg:#0a0a0a;--dim:#6b6b6b;--rule:#d8d8d8;--panel:#f6f6f6;--inv-bg:#0a0a0a;--inv-fg:#ffffff}
+@media (prefers-color-scheme:dark){:root{--bg:#060607;--fg:#ececed;--dim:#8c8c90;--rule:#232327;--panel:#0d0d0f;--inv-bg:#ececed;--inv-fg:#060607}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+ font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){
+ body{background-image:
+  radial-gradient(1px 1px at 12% 18%,#fff 50%,transparent 50%),
+  radial-gradient(1px 1px at 72% 9%,#fff 50%,transparent 50%),
+  radial-gradient(1px 1px at 33% 61%,#d7d7e2 50%,transparent 50%),
+  radial-gradient(1px 1px at 88% 44%,#fff 50%,transparent 50%),
+  radial-gradient(1px 1px at 54% 83%,#c9c9d6 50%,transparent 50%),
+  radial-gradient(1px 1px at 93% 77%,#fff 50%,transparent 50%),
+  radial-gradient(1px 1px at 6% 91%,#b9b9c6 50%,transparent 50%);
+  background-attachment:fixed;background-repeat:no-repeat}}
+.wrap{max-width:960px;margin:0 auto;padding:48px 16px 96px}
+pre.mark{margin:0;font-size:11px;line-height:1.15;letter-spacing:.5px;overflow-x:auto}
+h1{font-size:15px;letter-spacing:.22em;text-transform:uppercase;margin:28px 0 4px;font-weight:600}
+.sub{color:var(--dim);margin:0 0 28px}
+h2{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);
+ font-weight:600;margin:48px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+a{color:var(--fg);text-decoration:none;border-bottom:1px solid var(--rule)}
+a:hover{border-bottom-color:var(--fg)}
+.lede{max-width:66ch}
+.grid{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
+ grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cell{background:var(--bg);padding:14px 16px}
+.cell .k{color:var(--dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.cell .v{font-size:20px;margin-top:6px}
+.cell .v small{display:block;font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:.06em}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{color:var(--dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;
+ border-bottom:1px solid var(--fg)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:var(--panel)}
+.tag{display:inline-block;border:1px solid var(--rule);padding:1px 6px;margin:0 4px 4px 0;
+ font-size:11px;color:var(--dim);white-space:nowrap}
+.pass{background:var(--inv-bg);color:var(--inv-fg);padding:1px 7px;font-size:11px;letter-spacing:.08em}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ul.plain{list-style:none;padding:0;max-width:72ch}
+ul.plain li{padding:10px 0;border-bottom:1px solid var(--rule)}
+footer{margin-top:64px;padding-top:16px;border-top:1px solid var(--rule);color:var(--dim);font-size:11.5px}
+</style>
+<body>
+<div class="wrap">
+<pre class="mark" aria-label="KQL">  ██  ██  ██████  ██
+  ██ ██  ██    ██ ██
+  ████   ██    ██ ██
+  ██ ██  ██ ▄▄ ██ ██
+  ██  ██  ██████  ███████
+             ▀▀</pre>
+<h1>KQL Threat-Hunting Lab</h1>
+<p class="sub">detections-as-code &middot; windows telemetry &middot; att&amp;ck v20.1</p>
+
+<p class="lede">24 KQL detections across 8 ATT&amp;CK tactics. Each one runs
+against 420,977 recorded Windows attack events on a local Kusto emulator, and nothing is
+marked covered until a test has fired it on real data. Every figure below is read out of
+<a href="https://github.com/nandiiniisingh0618-cmd/kql-threat-hunting-lab/blob/main/RESULTS.md">RESULTS.md</a>, which the test harness writes.</p>
+
+<h2>Harness</h2>
+<div class="grid"><div class="cell"><div class="k">detections</div><div class="v">24</div></div>
+<div class="cell"><div class="k">passing on real data</div><div class="v">24/24</div></div>
+<div class="cell"><div class="k">events in corpus</div><div class="v">420,977 <small>39 datasets</small></div></div>
+<div class="cell"><div class="k">att&amp;ck</div><div class="v">v20.1 <small>pinned</small></div></div>
+<div class="cell"><div class="k">tactics</div><div class="v">8</div></div>
+<div class="cell"><div class="k">harness runtime</div><div class="v">5.29s <small>full corpus</small></div></div></div>
+<p class="sub" style="margin-top:14px">Last run 2026-11-16 09:21:37Z.</p>
+
+<h2>By tactic</h2>
+<div class="scroll"><table><thead><tr><th>Tactic</th><th class="n">Detections</th></tr></thead>
+<tbody><tr><td>Credential Access</td><td class='n'>6</td></tr>
+<tr><td>Persistence</td><td class='n'>4</td></tr>
+<tr><td>Defense Impairment</td><td class='n'>3</td></tr>
+<tr><td>Execution</td><td class='n'>3</td></tr>
+<tr><td>Lateral Movement</td><td class='n'>3</td></tr>
+<tr><td>Privilege Escalation</td><td class='n'>2</td></tr>
+<tr><td>Stealth</td><td class='n'>2</td></tr>
+<tr><td>Discovery</td><td class='n'>1</td></tr></tbody></table></div>
+
+<h2>Detections</h2>
+<div class="scroll"><table><thead><tr>
+<th>Detection</th><th>Techniques</th><th>Tactic</th><th>Result</th>
+<th class="n">TP hits</th><th class="n">Cross-dataset</th><th class="n">Time (s)</th>
+</tr></thead><tbody><tr><td>Autorun registry Run key written by a non-installer process</td><td><span class=tag>T1547.001</span></td><td>Persistence</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>0</td><td class='n'>0.206</td></tr>
+<tr><td>Burst of distinct discovery commands from one host</td><td><span class=tag>T1087.001</span><span class=tag>T1087.002</span><span class=tag>T1069.001</span><span class=tag>T1069.002</span><span class=tag>T1082</span><span class=tag>T1018</span><span class=tag>T1016</span><span class=tag>T1049</span><span class=tag>T1135</span></td><td>Discovery</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>1</td><td class='n'>0.167</td></tr>
+<tr><td>Credential-protection registry downgrade (WDigest, LSA PPL or NTLM)</td><td><span class=tag>T1112</span></td><td>Defense Impairment</td><td><span class=pass>PASS</span></td><td class='n'>5</td><td class='n'>0</td><td class='n'>0.136</td></tr>
+<tr><td>DCSync - directory replication rights used by a non-machine account</td><td><span class=tag>T1003.006</span></td><td>Credential Access</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>0</td><td class='n'>0.086</td></tr>
+<tr><td>Kerberoasting - RC4 service tickets requested for multiple SPNs</td><td><span class=tag>T1558.003</span></td><td>Credential Access</td><td><span class=pass>PASS</span></td><td class='n'>1</td><td class='n'>0</td><td class='n'>0.063</td></tr>
+<tr><td>LOLBin proxy execution - mshta, regsvr32, rundll32 or similar</td><td><span class=tag>T1218.005</span><span class=tag>T1218.010</span><span class=tag>T1218.011</span><span class=tag>T1218.003</span><span class=tag>T1218.004</span></td><td>Stealth</td><td><span class=pass>PASS</span></td><td class='n'>4</td><td class='n'>2</td><td class='n'>0.124</td></tr>
+<tr><td>LSASS process handle opened with credential-dump access mask</td><td><span class=tag>T1003.001</span></td><td>Credential Access</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>2</td><td class='n'>0.448</td></tr>
+<tr><td>NTDS.dit extraction via ntdsutil, shadow copy or direct copy</td><td><span class=tag>T1003.003</span></td><td>Credential Access</td><td><span class=pass>PASS</span></td><td class='n'>4</td><td class='n'>0</td><td class='n'>0.220</td></tr>
+<tr><td>Obfuscated or encoded PowerShell execution</td><td><span class=tag>T1059.001</span></td><td>Execution</td><td><span class=pass>PASS</span></td><td class='n'>9</td><td class='n'>22</td><td class='n'>0.699</td></tr>
+<tr><td>Pass-the-hash / overpass-the-hash - NTLM network logon with explicit credentials</td><td><span class=tag>T1550.002</span></td><td>Lateral Movement</td><td><span class=pass>PASS</span></td><td class='n'>1</td><td class='n'>3</td><td class='n'>0.312</td></tr>
+<tr><td>Password spraying - failed logons across many distinct accounts</td><td><span class=tag>T1110.003</span></td><td>Credential Access</td><td><span class=pass>PASS</span></td><td class='n'>1</td><td class='n'>0</td><td class='n'>0.158</td></tr>
+<tr><td>Process spawned by WMI provider host</td><td><span class=tag>T1047</span></td><td>Execution</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>1</td><td class='n'>0.060</td></tr>
+<tr><td>PsExec-style remote execution - suspicious service correlated with named pipe</td><td><span class=tag>T1021.002</span><span class=tag>T1569.002</span></td><td>Lateral Movement</td><td><span class=pass>PASS</span></td><td class='n'>4</td><td class='n'>1</td><td class='n'>0.322</td></tr>
+<tr><td>Remote thread created in another process</td><td><span class=tag>T1055</span><span class=tag>T1055.002</span></td><td>Privilege Escalation</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>2</td><td class='n'>0.123</td></tr>
+<tr><td>SAM or SYSTEM registry hive exported to disk</td><td><span class=tag>T1003.002</span></td><td>Credential Access</td><td><span class=pass>PASS</span></td><td class='n'>4</td><td class='n'>0</td><td class='n'>0.423</td></tr>
+<tr><td>Scheduled task created or modified with a suspicious action</td><td><span class=tag>T1053.005</span></td><td>Persistence</td><td><span class=pass>PASS</span></td><td class='n'>16</td><td class='n'>9</td><td class='n'>0.283</td></tr>
+<tr><td>Service installed with an interpreter, temp path or named-pipe image path</td><td><span class=tag>T1543.003</span><span class=tag>T1569.002</span></td><td>Persistence</td><td><span class=pass>PASS</span></td><td class='n'>4</td><td class='n'>2</td><td class='n'>0.152</td></tr>
+<tr><td>UAC bypass via hijacked shell-open registry handler</td><td><span class=tag>T1548.002</span></td><td>Privilege Escalation</td><td><span class=pass>PASS</span></td><td class='n'>4</td><td class='n'>0</td><td class='n'>0.105</td></tr>
+<tr><td>Unsigned or user-path DLL loaded by a service or system binary</td><td><span class=tag>T1574.001</span></td><td>Stealth</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>24</td><td class='n'>0.101</td></tr>
+<tr><td>WMI permanent event subscription created</td><td><span class=tag>T1546.003</span></td><td>Persistence</td><td><span class=pass>PASS</span></td><td class='n'>3</td><td class='n'>0</td><td class='n'>0.132</td></tr>
+<tr><td>WinRM remote execution - process spawned by WinRM host</td><td><span class=tag>T1021.006</span></td><td>Lateral Movement</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>6</td><td class='n'>0.358</td></tr>
+<tr><td>Windows Script Host execution of a script from a user-writable path</td><td><span class=tag>T1059.005</span></td><td>Execution</td><td><span class=pass>PASS</span></td><td class='n'>2</td><td class='n'>3</td><td class='n'>0.102</td></tr>
+<tr><td>Windows Security audit log cleared</td><td><span class=tag>T1685.005</span></td><td>Defense Impairment</td><td><span class=pass>PASS</span></td><td class='n'>1</td><td class='n'>5</td><td class='n'>0.112</td></tr>
+<tr><td>Windows event logging disabled or audit policy weakened</td><td><span class=tag>T1685.001</span></td><td>Defense Impairment</td><td><span class=pass>PASS</span></td><td class='n'>4</td><td class='n'>0</td><td class='n'>0.402</td></tr></tbody></table></div>
+<p class="sub" style="margin-top:14px">Cross-dataset counts datasets a rule fired on that it does not
+declare as a true-positive source. It is a false-positive proxy, not an FP rate: every dataset here is
+attack data, so some overlap is genuinely correct.</p>
+
+<h2>What this is not</h2>
+<ul class="plain">
+<li>Not production telemetry. "Covered" means a query fired on a recorded attack in a lab domain of a
+handful of hosts, over 39 public datasets.</li>
+<li>Not tuned for deployment. Thresholds are set low enough to be provable on these captures; each rule's
+<code>tuning_notes</code> says what to raise.</li>
+<li>Not a Sentinel pack. The export under <code>export/sentinel/</code> is a structural translation and is
+labelled UNTESTED: the queries call this lab's stored functions.</li>
+</ul>
+
+<h2>Read more</h2>
+<ul class="plain">
+<li><a href="https://github.com/nandiiniisingh0618-cmd/kql-threat-hunting-lab">Repository</a>, with the full setup path and the architecture diagram.</li>
+<li><a href="https://github.com/nandiiniisingh0618-cmd/kql-threat-hunting-lab/blob/main/docs/HOW_IT_WORKS.md">How it works</a>: all 24 detections in plain English.</li>
+<li><a href="https://github.com/nandiiniisingh0618-cmd/kql-threat-hunting-lab/blob/main/coverage/COVERAGE.md">Coverage</a> and <a href="https://github.com/nandiiniisingh0618-cmd/kql-threat-hunting-lab/blob/main/coverage/GAPS.md">known gaps</a>, both generated from passing tests only.</li>
+<li><a href="https://github.com/nandiiniisingh0618-cmd/kql-threat-hunting-lab/tree/main/hunts">Hunts</a>: three write-ups, including one negative result kept as-is.</li>
+</ul>
+
+<footer>Generated by <code>python tasks.py site</code> from the harness run of 2026-11-16 09:21:37Z.
+Code and detections MIT. No dataset is redistributed. ATT&amp;CK is used under MITRE's terms.</footer>
+</div>
+</body>
+</html>
