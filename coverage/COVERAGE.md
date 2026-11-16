@@ -1,7 +1,7 @@
 # COVERAGE.md
 
 **Generated** by `make coverage` from `RESULTS.md` -- do not edit.
-Last generated 2026-11-15 17:22:57Z.
+Last generated 2026-11-16 09:21:39Z.
 
 - ATT&CK Enterprise **v20.1**
 - Detections: **24**, passing a real-data test: **24**
@@ -105,28 +105,28 @@ Last generated 2026-11-15 17:22:57Z.
 
 | Detection | Severity | Techniques | TP hits | Cross-dataset | Runtime |
 |---|---|---|---:|---:|---:|
-| Autorun registry Run key written by a non-installer process | Medium | T1547.001 | 2 | 0 | 0.148s |
-| Burst of distinct discovery commands from one host | Medium | T1087.001, T1087.002, T1069.001, T1069.002, T1082, T1018, T1016, T1049, T1135 | 2 | 1 | 0.311s |
-| Credential-protection registry downgrade (WDigest, LSA PPL or NTLM) | High | T1112 | 5 | 0 | 0.147s |
-| DCSync - directory replication rights used by a non-machine account | High | T1003.006 | 2 | 0 | 0.090s |
-| Kerberoasting - RC4 service tickets requested for multiple SPNs | Medium | T1558.003 | 1 | 0 | 0.105s |
-| LOLBin proxy execution - mshta, regsvr32, rundll32 or similar | Medium | T1218.005, T1218.010, T1218.011, T1218.003, T1218.004 | 4 | 2 | 0.178s |
-| LSASS process handle opened with credential-dump access mask | High | T1003.001 | 2 | 2 | 0.347s |
-| NTDS.dit extraction via ntdsutil, shadow copy or direct copy | High | T1003.003 | 4 | 0 | 0.218s |
-| Obfuscated or encoded PowerShell execution | Medium | T1059.001 | 9 | 22 | 0.481s |
-| Pass-the-hash / overpass-the-hash - NTLM network logon with explicit credentials | High | T1550.002 | 1 | 3 | 0.154s |
-| Password spraying - failed logons across many distinct accounts | Medium | T1110.003 | 1 | 0 | 0.118s |
-| Process spawned by WMI provider host | Medium | T1047 | 2 | 1 | 0.101s |
-| PsExec-style remote execution - suspicious service correlated with named pipe | High | T1021.002, T1569.002 | 4 | 1 | 0.231s |
-| Remote thread created in another process | High | T1055, T1055.002 | 2 | 2 | 0.105s |
-| SAM or SYSTEM registry hive exported to disk | High | T1003.002 | 4 | 0 | 0.257s |
-| Scheduled task created or modified with a suspicious action | Medium | T1053.005 | 16 | 9 | 0.166s |
-| Service installed with an interpreter, temp path or named-pipe image path | High | T1543.003, T1569.002 | 4 | 2 | 0.114s |
-| UAC bypass via hijacked shell-open registry handler | High | T1548.002 | 4 | 0 | 0.137s |
-| Unsigned or user-path DLL loaded by a service or system binary | Medium | T1574.001 | 2 | 24 | 0.123s |
-| WMI permanent event subscription created | High | T1546.003 | 3 | 0 | 0.093s |
-| WinRM remote execution - process spawned by WinRM host | Medium | T1021.006 | 2 | 6 | 0.181s |
-| Windows Script Host execution of a script from a user-writable path | Medium | T1059.005 | 2 | 3 | 0.198s |
-| Windows Security audit log cleared | High | T1685.005 | 1 | 5 | 0.092s |
-| Windows event logging disabled or audit policy weakened | High | T1685.001 | 4 | 0 | 0.273s |
+| Autorun registry Run key written by a non-installer process | Medium | T1547.001 | 2 | 0 | 0.206s |
+| Burst of distinct discovery commands from one host | Medium | T1087.001, T1087.002, T1069.001, T1069.002, T1082, T1018, T1016, T1049, T1135 | 2 | 1 | 0.167s |
+| Credential-protection registry downgrade (WDigest, LSA PPL or NTLM) | High | T1112 | 5 | 0 | 0.136s |
+| DCSync - directory replication rights used by a non-machine account | High | T1003.006 | 2 | 0 | 0.086s |
+| Kerberoasting - RC4 service tickets requested for multiple SPNs | Medium | T1558.003 | 1 | 0 | 0.063s |
+| LOLBin proxy execution - mshta, regsvr32, rundll32 or similar | Medium | T1218.005, T1218.010, T1218.011, T1218.003, T1218.004 | 4 | 2 | 0.124s |
+| LSASS process handle opened with credential-dump access mask | High | T1003.001 | 2 | 2 | 0.448s |
+| NTDS.dit extraction via ntdsutil, shadow copy or direct copy | High | T1003.003 | 4 | 0 | 0.220s |
+| Obfuscated or encoded PowerShell execution | Medium | T1059.001 | 9 | 22 | 0.699s |
+| Pass-the-hash / overpass-the-hash - NTLM network logon with explicit credentials | High | T1550.002 | 1 | 3 | 0.312s |
+| Password spraying - failed logons across many distinct accounts | Medium | T1110.003 | 1 | 0 | 0.158s |
+| Process spawned by WMI provider host | Medium | T1047 | 2 | 1 | 0.060s |
+| PsExec-style remote execution - suspicious service correlated with named pipe | High | T1021.002, T1569.002 | 4 | 1 | 0.322s |
+| Remote thread created in another process | High | T1055, T1055.002 | 2 | 2 | 0.123s |
+| SAM or SYSTEM registry hive exported to disk | High | T1003.002 | 4 | 0 | 0.423s |
+| Scheduled task created or modified with a suspicious action | Medium | T1053.005 | 16 | 9 | 0.283s |
+| Service installed with an interpreter, temp path or named-pipe image path | High | T1543.003, T1569.002 | 4 | 2 | 0.152s |
+| UAC bypass via hijacked shell-open registry handler | High | T1548.002 | 4 | 0 | 0.105s |
+| Unsigned or user-path DLL loaded by a service or system binary | Medium | T1574.001 | 2 | 24 | 0.101s |
+| WMI permanent event subscription created | High | T1546.003 | 3 | 0 | 0.132s |
+| WinRM remote execution - process spawned by WinRM host | Medium | T1021.006 | 2 | 6 | 0.358s |
+| Windows Script Host execution of a script from a user-writable path | Medium | T1059.005 | 2 | 3 | 0.102s |
+| Windows Security audit log cleared | High | T1685.005 | 1 | 5 | 0.112s |
+| Windows event logging disabled or audit policy weakened | High | T1685.001 | 4 | 0 | 0.402s |
 

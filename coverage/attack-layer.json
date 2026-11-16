@@ -6,7 +6,7 @@
     "layer": "4.5"
   },
   "domain": "enterprise-attack",
-  "description": "Techniques with at least one PASSING real-data test in this lab. Generated 2026-11-15 from RESULTS.md. Scored by number of passing detections. Coverage applies ONLY to the pinned public attack datasets in this repo, not to production telemetry.",
+  "description": "Techniques with at least one PASSING real-data test in this lab. Generated 2026-11-16 from RESULTS.md. Scored by number of passing detections. Coverage applies ONLY to the pinned public attack datasets in this repo, not to production telemetry.",
   "filters": {
     "platforms": [
       "Windows"
