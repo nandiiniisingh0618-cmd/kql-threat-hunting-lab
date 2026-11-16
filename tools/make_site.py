@@ -132,12 +132,15 @@ def build() -> Path:
         by_tactic[_tactic_of(row["name"], tactics)] = by_tactic.get(_tactic_of(row["name"], tactics), 0) + 1
 
     e = html.escape
+    techniques = {t.strip() for row in rows for t in row["techniques"].split(",") if t.strip()}
     cells = [
         ("detections", stats["run_count"], ""),
         ("passing on real data", f"{stats['passing']}/{stats['run_count']}", ""),
-        ("events in corpus", stats["events"], f"{stats['datasets']} datasets"),
+        ("events in corpus", stats["events"], "windows attack telemetry"),
+        ("datasets", stats["datasets"], "public, none redistributed"),
         ("att&ck", f"v{stats['attack']}", "pinned"),
-        ("tactics", str(len(by_tactic)), ""),
+        ("techniques", str(len(techniques)), f"{len(by_tactic)} tactics"),
+        ("tactics", str(len(by_tactic)), "of enterprise att&ck"),
         ("harness runtime", f"{stats['query_time']}s", "full corpus"),
     ]
     cell_html = "\n".join(
